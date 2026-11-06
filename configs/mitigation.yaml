@@ -1,0 +1,46 @@
+# goodhart.experiments.train_grpo — same as grpo.yaml, delayed reward with a sweep over alpha
+seed: 42
+run_name: grpo-delayed
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+reward:
+  kind: delayed
+  alpha: 0.3            # overridden by each value of sweep.alphas
+  persona_weights:
+    agreeable: 0.7
+    truth_seeking: 0.3
+
+sweep:
+  alphas: [0.3, 0.6]
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+grpo:
+  num_generations: 8
+  learning_rate: 1.0e-5
+  max_steps: 600
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 2
+  max_prompt_length: 512
+  max_completion_length: 512
+  beta: 0.04
+  temperature: 1.0
+  use_vllm: true
+  vllm_mode: colocate
+  bf16: true
+  logging_steps: 5
+  save_steps: 50
+
+eval:
+  every_steps: 50
+  val_items: 300
+  sycophancy_eval: true
+  sycophancy_eval_items: 300
+
+out: results/grpo

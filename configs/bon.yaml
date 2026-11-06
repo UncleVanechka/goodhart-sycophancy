@@ -1,0 +1,30 @@
+# goodhart.experiments.baseline and goodhart.experiments.best_of_n
+seed: 42
+data: data/prompts.jsonl
+split: test
+max_items: 500          # items per opinion type; null = all
+
+models:
+  - Qwen/Qwen3-1.7B
+  - Qwen/Qwen3-4B
+
+generation:
+  backend: vllm         # vllm | hf
+  n: 64                 # samples per prompt; N values below reuse the first N
+  temperature: 1.0
+  top_p: 0.95
+  max_tokens: 512
+  dtype: bfloat16
+  gpu_memory_utilization: 0.85
+  chat_template_kwargs:   # passed to tokenizer.apply_chat_template; Qwen3 thinks by default
+    enable_thinking: false
+
+n_values: [1, 4, 16, 64]
+
+simulator: configs/simulator.yaml
+
+# Selection by mixed reward r = (1 - alpha) * immediate + alpha * delayed
+mitigation:
+  alphas: [0.0, 0.3, 0.6, 1.0]
+
+out: results/bon

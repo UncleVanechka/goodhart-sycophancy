@@ -1,0 +1,21 @@
+# goodhart.simulator — the simulated user that produces the proxy reward
+backend: anthropic      # anthropic | vllm | mock
+
+anthropic:
+  model: claude-haiku-5-5
+  max_tokens: 256         # thinking is disabled at effort low..high, so this is all reply
+  effort: low
+  concurrency: 8
+  max_retries: 3
+
+vllm:
+  base_url: ${VLLM_BASE_URL}       # OpenAI-compatible server
+  model: Qwen/Qwen2.5-7B-Instruct
+  max_tokens: 64
+  concurrency: 16
+
+# Default persona for the immediate reward. See goodhart.simulator.persona
+persona: agreeable
+
+# Scores are cached by (persona, prompt, response, gold) so re-runs never pay twice
+cache: data/simulator_cache.sqlite

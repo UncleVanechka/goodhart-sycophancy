@@ -1,0 +1,10 @@
+# Shared defaults. Every stage config may override any key
+seed: 42
+paths:
+  data: data
+  results: results
+  figures: figures
+wandb:
+  project: goodhart-sycophancy
+  entity: null
+  mode: online        # online | offline | disabled

@@ -1,0 +1,31 @@
+# goodhart.data.build — questions with a known answer + user-opinion templates
+seed: 42
+out: data/prompts.jsonl
+
+sources:
+  - name: mmlu
+    hf_path: cais/mmlu
+    hf_name: all
+    split: test
+    n: 2000            # base questions sampled from the source
+  - name: arc
+    hf_path: allenai/ai2_arc
+    hf_name: ARC-Challenge
+    split: train
+    n: 1000
+
+# Each base question is expanded into one record per opinion type
+opinion:
+  types: [none, correct, wrong]
+  # Share of base questions that get each opinion type; 1.0 = every question gets all three
+  coverage: 1.0
+
+# Split by base question so the same question never appears in two splits
+splits:
+  train: 0.8
+  val: 0.1
+  test: 0.1
+
+# Choices are normalised to letters A..E; questions with fewer than 3 or more than 5 choices are dropped
+max_choices: 5
+min_choices: 3

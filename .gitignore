@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local config
+.env
+*.local.yaml
+
+# Data, checkpoints, outputs
+data/
+checkpoints/
+outputs/
+wandb/
+results/*
+!results/.gitkeep
+figures/*
+!figures/.gitkeep
+*.safetensors
+*.bin
+*.pt
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+.claude/

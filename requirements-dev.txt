@@ -1,0 +1,10 @@
+# CPU-only: enough to run unit tests, build the dataset and draw plots
+numpy>=1.26
+pandas>=2.2
+pyyaml>=6.0
+tqdm>=4.66
+python-dotenv>=1.0
+matplotlib>=3.9
+pytest>=8.0
+pytest-cov>=5.0
+ruff>=0.6

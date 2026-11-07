@@ -291,13 +291,18 @@ def expand_sweep(cfg: dict) -> list[tuple[str, dict]]:
 
 
 def build_grpo_kwargs(cfg: dict, run_name: str) -> dict[str, Any]:
-    """Keyword arguments for ``trl.GRPOConfig``: ``cfg["grpo"]`` passed through plus run wiring."""
+    """Keyword arguments for ``trl.GRPOConfig``: ``cfg["grpo"]`` passed through plus run wiring.
+
+    Reports to W&B unless ``wandb.mode`` is ``disabled``, in which case the ``wandb`` package
+    is not needed at all.
+    """
+    mode = str((cfg.get("wandb") or {}).get("mode") or "online")
     return {
         **cfg["grpo"],
         "output_dir": str(Path(cfg["out"]) / run_name),
         "run_name": run_name,
         "seed": int(cfg["seed"]),
-        "report_to": "wandb",
+        "report_to": "none" if mode == "disabled" else "wandb",
     }
 
 
@@ -379,10 +384,9 @@ def train_one(
     val_records = select_eval_items(records, cfg["eval"].get("val_items"), rng)
 
     _configure_wandb(cfg)
-    reward = make_reward_fn(records_by_id, reward_fn, log=_wandb_log)
-    callback = make_eval_callback(
-        cfg, curve_path, val_records, reward_fn, heldout_records, log=_wandb_log
-    )
+    log = None if build_grpo_kwargs(cfg, run_name)["report_to"] == "none" else _wandb_log
+    reward = make_reward_fn(records_by_id, reward_fn, log=log)
+    callback = make_eval_callback(cfg, curve_path, val_records, reward_fn, heldout_records, log=log)
     trainer = GRPOTrainer(
         model=cfg["model"],
         reward_funcs=reward,

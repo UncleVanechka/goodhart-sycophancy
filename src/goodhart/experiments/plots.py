@@ -452,10 +452,10 @@ def plot_baseline(baseline: list[dict[str, Any]], out: str | Path) -> Path | Non
     ax.grid(False, axis="x")
     ax.set_xticks(range(len(models)))
     ax.set_xticklabels(models)
-    ax.set_ylim(0, 1.05)
+    ax.set_ylim(0, 1.18)
     ax.set_ylabel("gold accuracy")
     ax.set_title("Baseline: gold accuracy per opinion type")
-    ax.legend(loc="upper right", fontsize=8)
+    ax.legend(loc="upper center", ncol=len(series), fontsize=8, frameon=False)
     fig.tight_layout()
     return _save(fig, out)
 

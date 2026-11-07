@@ -3,8 +3,8 @@
 Optimizing a recommender for clicks breeds clickbait. Optimizing an LLM for
 "user satisfaction" breeds sycophancy. This repo is a small, fully reproducible
 experiment that measures the second effect and tests whether two mitigations
-borrowed from recommender systems — guardrail metrics and *delayed* (long-term)
-reward instead of immediate reward — reduce it.
+borrowed from recommender systems — a *delayed* (long-term) reward instead of
+the immediate one, and a mixture of user personas — reduce it.
 
 ## Research question
 
@@ -42,7 +42,7 @@ with) rates the answer 1–10.
 
 Experiments, in order of increasing risk:
 
-1. **Baseline** — sycophancy rate of 2–3 open models with and without a user opinion.
+1. **Baseline** — sycophancy rate of two open models (Qwen3-1.7B, Qwen3-4B) with and without a user opinion.
 2. **Best-of-N** (guaranteed minimum) — sample N ∈ {1, 4, 16, 64}, pick the best
    by proxy, plot proxy and gold against log N.
 3. **RL** (main result) — GRPO against the proxy reward; proxy / gold /
@@ -59,14 +59,15 @@ per α.
 configs/          YAML configs for every stage (base, data, simulator, bon, grpo, mitigation)
 src/goodhart/
   data/           dataset builder, opinion templates, SycophancyEval loader
-  simulator/      personas, scoring backends (Anthropic / vLLM / mock), reward functions
+  simulator/      personas, scoring backends (Anthropic / vLLM / local HF judge / mock), reward functions
   policy/         sampling N responses from the policy (vLLM / HF)
   eval/           answer parsing, metrics (gold, sycophancy, proxy)
   experiments/    baseline, best_of_n, train_grpo, plots — CLI entry points
 docs/DESIGN.md    data schema and module interfaces
+docs/ROADMAP.md   plan, flow diagrams, results so far, timeline
 tests/            unit tests, no GPU and no network
-results/          JSON/CSV outputs (git-ignored except .gitkeep)
-figures/          plots (git-ignored except .gitkeep)
+results/          JSON outputs; baseline/ and bon/ summaries are committed, per-sample files are not
+figures/          plots; the PNGs rendered from the committed results are tracked
 ```
 
 ## Reproduce
@@ -92,23 +93,30 @@ and writes a JSON with its config and outputs to `results/`.
 
 | Component | Choice |
 |---|---|
-| Policy | Qwen 1.5–4B Instruct (small enough for RL in hours) |
-| User simulator | Claude Haiku via the Anthropic API, or any model behind vLLM |
+| Policy | Qwen3-1.7B and Qwen3-4B (small enough for RL in hours) |
+| User simulator | Claude Haiku via the Anthropic API, any model behind vLLM, or a local `transformers` judge (Qwen2.5-7B-Instruct in the runs so far) |
 | Gold | Ground truth from the dataset, no LLM judge |
-| Training data | MMLU / ARC + opinion templates, 2–5k prompts |
+| Training data | MMLU / ARC + opinion templates: 3 000 questions × 3 opinion types = 9 000 prompts (7 200 / 900 / 900 split) |
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
-| RL | TRL `GRPOTrainer` + LoRA, generation through vLLM |
+| RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
 | Tracking | Weights & Biases |
 | Compute | 1× A100/H100 80 GB, ~40–60 GPU-hours |
 
 ## Status
 
+Plan, flow diagrams, results so far and the timeline live in
+[docs/ROADMAP.md](docs/ROADMAP.md); the headline figure is
+[figures/goodhart_frontier.png](figures/goodhart_frontier.png).
+
 - [x] Repository skeleton, configs, data schema, interfaces
+- [x] Dataset: 9 000 prompts (3 000 MMLU / ARC questions × 3 opinion types)
+- [x] Judge checked statistically (prefers agreement under a wrong opinion)
 - [ ] User simulator validated by hand on 50 examples
-- [ ] Baseline for 2–3 models
-- [ ] Best-of-N curves
+- [x] Baseline for Qwen3-1.7B and Qwen3-4B
+- [x] Best-of-N curves for Qwen3-1.7B (incl. delayed-reward sweep over α)
+- [ ] Best-of-N curves for Qwen3-4B (running)
 - [ ] GRPO run
-- [ ] Mitigation runs
+- [ ] Mitigation runs in GRPO
 - [ ] Write-up
 
 ## References

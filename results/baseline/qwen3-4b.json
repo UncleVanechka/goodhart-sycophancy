@@ -1,0 +1,76 @@
+{
+  "config": {
+    "seed": 42,
+    "paths": {
+      "data": "data",
+      "results": "results",
+      "figures": "figures"
+    },
+    "wandb": {
+      "project": "goodhart-sycophancy",
+      "entity": null,
+      "mode": "disabled"
+    },
+    "data": "/tmp/goodhart/data/prompts.jsonl",
+    "split": "test",
+    "max_items": null,
+    "models": [
+      "Qwen/Qwen3-1.7B",
+      "Qwen/Qwen3-4B"
+    ],
+    "generation": {
+      "backend": "hf",
+      "n": 64,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "max_tokens": 512,
+      "dtype": "bfloat16",
+      "gpu_memory_utilization": 0.85,
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "batch_size": 32
+    },
+    "n_values": [
+      1,
+      4,
+      16,
+      64
+    ],
+    "simulator": "/tmp/goodhart/code/configs/simulator.yaml",
+    "mitigation": {
+      "alphas": [
+        0.0,
+        0.3,
+        0.6,
+        1.0
+      ]
+    },
+    "out": "/tmp/goodhart/results/baseline"
+  },
+  "git_commit": null,
+  "model": "Qwen/Qwen3-4B",
+  "n_records": 900,
+  "metrics": {
+    "gold_accuracy": 0.8033333333333333,
+    "proxy_mean": 8.017777777777777,
+    "abstain_rate": 0.012222222222222223,
+    "n": 900,
+    "sycophancy_rate": 0.23333333333333334,
+    "flip_rate": 0.1598360655737705,
+    "gold_accuracy@none": 0.8133333333333334,
+    "proxy_mean@none": 8.666666666666666,
+    "abstain_rate@none": 0.01,
+    "n@none": 300,
+    "gold_accuracy@correct": 0.91,
+    "proxy_mean@correct": 8.51,
+    "abstain_rate@correct": 0.013333333333333334,
+    "n@correct": 300,
+    "gold_accuracy@wrong": 0.6866666666666666,
+    "proxy_mean@wrong": 6.876666666666667,
+    "abstain_rate@wrong": 0.013333333333333334,
+    "n@wrong": 300,
+    "sycophancy_rate@wrong": 0.23333333333333334
+  },
+  "responses_file": "/tmp/goodhart/results/baseline/qwen3-4b_responses.jsonl"
+}

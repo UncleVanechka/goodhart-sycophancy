@@ -23,8 +23,13 @@ outputs/
 wandb/
 results/*
 !results/.gitkeep
+!results/baseline/
+!results/bon/
+results/baseline/*_responses.jsonl
+results/bon/*_samples.jsonl
 figures/*
 !figures/.gitkeep
+!figures/*.png
 *.safetensors
 *.bin
 *.pt

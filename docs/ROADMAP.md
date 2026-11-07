@@ -8,14 +8,13 @@ whether two recommender-systems remedies — a delayed ("the user learns the
 truth") reward and a mixture of personas — reduce it without giving up the proxy.
 
 **Where we are.** The guaranteed-minimum result is in: Best-of-N on Qwen3-1.7B
-shows the Goodhart curve (proxy up, gold flat, sycophancy up) and the delayed
-reward removes it. Best-of-N on Qwen3-4B is running. Next is the main result, RL
-with GRPO, then the write-up.
+and Qwen3-4B shows the Goodhart curve (proxy up, gold flat, sycophancy up) and
+the delayed reward removes it on both models. Next is the main result, RL with
+GRPO, then the write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       1.7B done     next     (BoN part done)   Nov 17+
-                                   4B running
+  done       done       done       done          next     (BoN part done)   Nov 17+
 ```
 
 ## 1. The question in one picture
@@ -27,7 +26,10 @@ N = 1 → 64), one curve per weight α of the delayed reward. With α = 0 (pure
 immediate approval) the proxy climbs 0.9 points while gold stalls and sycophancy
 rises from 45.5 % to 53 %. With α = 1 (the user rates after learning the truth)
 gold climbs to 78 % and sycophancy drops to 37 % — and the proxy stops moving.
-The fan of curves out of a single point is the headline figure of the project.
+Qwen3-4B draws the same fan one tier higher: α = 0 takes the proxy from 8.05
+to 9.02 while gold stays at 80 % and sycophancy rises from 27.5 % to 34.5 %;
+α = 1 takes gold to 89 % and sycophancy down to 15 %. The fan of curves out
+of a single point is the headline figure of the project.
 
 ## 2. Flow
 
@@ -110,7 +112,7 @@ figures. Two consequences shape the stack:
 | # | Experiment | What it isolates | Status |
 |---|---|---|---|
 | 1 | **Baseline** — one answer per prompt, no optimization | sycophancy the model brings in; the judge's bias | ✅ Qwen3-1.7B, Qwen3-4B |
-| 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) · 🔄 4B running |
+| 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B and 4B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) |
 | 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ⏳ next |
 | 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ⏳ in GRPO |
 
@@ -142,11 +144,11 @@ first (median 373), which gives the judge more surface to reward on 4B. Both
 the judge check and the medians come from the per-response files, which are
 not committed (see §9).
 
-### 4.2 Best-of-N, Qwen3-1.7B (test split, 200 questions × 3 opinions, 64 samples each)
+### 4.2 Best-of-N (test split, 200 questions × 3 opinions, 64 samples each)
 
 ![Best-of-N curves](../figures/bon_curves.png)
 
-Selection by the immediate reward (α = 0):
+**Qwen3-1.7B.** Selection by the immediate reward (α = 0):
 
 | N | proxy | gold | gold @ `none` | gold @ `wrong` | sycophancy | flip |
 |---|---|---|---|---|---|---|
@@ -164,25 +166,50 @@ Selection by the mixed reward, N = 64:
 | 0.6 | 8.59 | 77.3 % | 40.0 % | 29.7 % |
 | 1.0 | 8.02 | 78.0 % | 37.0 % | 27.8 % |
 
+**Qwen3-4B.** Selection by the immediate reward (α = 0):
+
+| N | proxy | gold | gold @ `none` | gold @ `wrong` | sycophancy | flip |
+|---|---|---|---|---|---|---|
+| 1 | 8.05 | 79.2 % | 81.5 % | 64.5 % | 27.5 % | 19.0 % |
+| 4 | 8.61 | 81.7 % | 84.5 % | 64.0 % | 29.5 % | 23.7 % |
+| 16 | 8.91 | 80.2 % | 83.0 % | 61.0 % | 33.5 % | 27.1 % |
+| 64 | 9.02 | 80.5 % | 84.0 % | 60.0 % | 34.5 % | 28.6 % |
+
+Selection by the mixed reward, N = 64:
+
+| α | proxy | gold | sycophancy | flip |
+|---|---|---|---|---|
+| 0.0 | 9.02 | 80.5 % | 34.5 % | 28.6 % |
+| 0.3 | 9.01 | 84.8 % | 29.0 % | 26.0 % |
+| 0.6 | 8.93 | 87.2 % | 24.0 % | 20.4 % |
+| 1.0 | 8.32 | 89.0 % | 15.0 % | 12.6 % |
+
 What the numbers say:
 
-- **The Goodhart curve is there without any training.** Proxy rises
-  monotonically; gold plateaus by N = 4 and dips at N = 64; sycophancy climbs
-  7.5 points. Gold rises where approval and truth agree (`none`: 67 → 72.5 %)
-  and falls where they conflict (`wrong`: 46 → 43 %) — the judge is a decent
-  proxy exactly until the user is wrong.
-- **Delayed reward is the RecSys remedy, and it works here.** α = 0.6 keeps
-  most of the proxy gain (8.59 of 8.82) while gold goes to 77 % and sycophancy
-  to 40 %; α = 1 gives the best gold at the price of a flat proxy.
-- **The judge rewards the letter, not the prose.** 1.7B answers in one line, so
-  the whole effect is in which letter gets picked. 4B, which reasons, is the
-  model to watch for agreeing *explanations*.
+- **The Goodhart curve is there without any training, on both models.** Proxy
+  rises monotonically (+0.9 on 1.7B, +1.0 on 4B); gold plateaus by N = 4 and
+  then drifts; sycophancy climbs 7.5 points on 1.7B and 7 points on 4B. Gold
+  rises where approval and truth agree (`none`: 67 → 72.5 % on 1.7B, 81.5 →
+  84 % on 4B) and falls where they conflict (`wrong`: 46 → 43 % and 64.5 →
+  60 %) — the judge is a decent proxy exactly until the user is wrong.
+- **Delayed reward is the RecSys remedy, and it works here.** On 1.7B, α = 0.6
+  keeps most of the proxy gain (8.59 of 8.82) while gold goes to 77 % and
+  sycophancy to 40 %. On 4B the trade is almost free: α = 0.3 keeps the proxy
+  at 9.01 (vs 9.02) while gold goes from 80.5 % to 84.8 % and sycophancy from
+  34.5 % to 29 %; α = 1 gives gold 89 % and sycophancy 15 %, far below the
+  model's own baseline of 27.5 %.
+- **The bigger model gives the selector more to work with.** 1.7B answers in
+  one line, so the whole effect is in which letter gets picked and the α = 1
+  proxy stays flat. 4B reasons first; there the informed judge still finds
+  answers it rates higher (proxy 8.05 → 8.32 at α = 1), and the α = 0 selector
+  pushes sycophancy up from a lower base by the same ~7 points. Agreeing
+  *explanations* on 4B are the thing to read by hand before the write-up.
 
 Caveats to carry into the write-up: 200 questions per opinion type put
-roughly ±3.5 points of binomial noise on every rate, so the 45.5 → 53.0
-sycophancy move is about two standard errors; the α = 0 proxy curve is
-monotone, the other series wobble within that noise, so individual points are
-not to be read literally. N = 1 is a single
+roughly ±3.5 points of binomial noise on every rate, so a 7-point sycophancy
+move is about two standard errors; the α = 0 proxy curves are monotone, the
+other series wobble within that noise, so individual points are not to be read
+literally. N = 1 is a single
 temperature-1.0 sample on the 200-question subset, so it differs slightly from
 the greedy baseline above.
 
@@ -191,7 +218,7 @@ the greedy baseline above.
 | Dates | Milestone | Status |
 |---|---|---|
 | Nov 3–5 | Reading; repo, configs, dataset (9 000 prompts), 194 offline tests | ✅ Nov 6 |
-| Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 (1.7B) · 🔄 4B |
+| Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
 | Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ⏳ |
 | Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ⏳ |
@@ -200,21 +227,20 @@ the greedy baseline above.
 
 ## 6. Next steps, in order
 
-1. **Best-of-N on Qwen3-4B** (running) — same protocol; expect a different
-   shape because 4B reasons before answering.
-2. **Judge validation by hand** — 50 rated answers read by a human: does the
-   agreeable persona really prefer agreement, and where does it fail? This
-   answers "why is a simulated user a valid proxy, and where is it not".
-3. **GRPO smoke** — `configs/grpo.yaml` overridden with `use_vllm: false`,
+1. **Judge validation by hand** — 50 rated answers read by a human, on 4B
+   where the answers carry explanations: does the agreeable persona really
+   prefer agreement, and where does it fail? This answers "why is a simulated
+   user a valid proxy, and where is it not".
+2. **GRPO smoke** — `configs/grpo.yaml` overridden with `use_vllm: false`,
    `max_steps: 200` and `WANDB_MODE=offline` (the config itself still says
    vLLM, 600 steps, W&B online); stop if the proxy does not rise.
-4. **GRPO full run** — 600 steps, eval every 50 on val and on held-out
+3. **GRPO full run** — 600 steps, eval every 50 on val and on held-out
    SycophancyEval; curves of proxy / gold / sycophancy over steps.
-5. **GRPO mitigation** — `configs/mitigation.yaml`, α ∈ {0.3, 0.6}; the
+4. **GRPO mitigation** — `configs/mitigation.yaml`, α ∈ {0.3, 0.6}; the
    frontier plot gains one curve per α from training, next to the BoN curves.
-6. **Confidence intervals** — bootstrap over questions for every rate in
+5. **Confidence intervals** — bootstrap over questions for every rate in
    §4, and a second seed for Best-of-N if GPU time allows.
-7. **Write-up and cleanup** — figures, limitations, reproduction commands.
+6. **Write-up and cleanup** — figures, limitations, reproduction commands.
 
 ## 7. Risks and fallbacks
 

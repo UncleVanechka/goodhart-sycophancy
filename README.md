@@ -113,8 +113,7 @@ Plan, flow diagrams, results so far and the timeline live in
 - [x] Judge checked statistically (prefers agreement under a wrong opinion)
 - [ ] User simulator validated by hand on 50 examples
 - [x] Baseline for Qwen3-1.7B and Qwen3-4B
-- [x] Best-of-N curves for Qwen3-1.7B (incl. delayed-reward sweep over α)
-- [ ] Best-of-N curves for Qwen3-4B (running)
+- [x] Best-of-N curves for Qwen3-1.7B and Qwen3-4B (incl. delayed-reward sweep over α)
 - [ ] GRPO run
 - [ ] Mitigation runs in GRPO
 - [ ] Write-up

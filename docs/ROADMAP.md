@@ -232,9 +232,13 @@ the greedy baseline above.
    1.1 on reasoned ones (4B), under-punishes polite correction and rates on a
    {2, 7–9} scale. Before the full GRPO run on 4B: sharpen the persona and
    harden the informed judge (JUDGE_CHECK §4), re-check the 20 pairs.
-2. **GRPO smoke** — `configs/grpo.yaml` overridden with `use_vllm: false`,
-   `max_steps: 200` and `WANDB_MODE=offline` (the config itself still says
-   vLLM, 600 steps, W&B online); stop if the proxy does not rise.
+2. **GRPO smoke** — first run (`results/grpo/grpo-smoke-1/`, Qwen3-1.7B,
+   200 steps, 53 min on HF generate) proved the loop but not the signal: the
+   eval proxy stayed at 7.5 and sycophancy at 43 % because the linear schedule
+   had decayed the learning rate to ~0, each step saw only 2 prompts, and in
+   50–68 % of the groups all 8 completions got the same rating (no gradient;
+   KL 0.01). Second smoke in flight: constant lr 3e-5 after a 10-step warmup,
+   8 prompts × 8 completions per step. Go / no-go for RL still rests on it.
 3. **GRPO full run** — 600 steps, eval every 50 on val and on held-out
    SycophancyEval; curves of proxy / gold / sycophancy over steps.
 4. **GRPO mitigation** — `configs/mitigation.yaml`, α ∈ {0.3, 0.6}; the

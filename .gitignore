@@ -26,6 +26,10 @@ results/*
 !results/baseline/
 !results/bon/
 !results/judge_check/
+!results/grpo/
+!results/grpo/*/
+results/grpo/*/checkpoint-*/
+results/grpo/*/final/
 results/baseline/*_responses.jsonl
 results/bon/*_samples.jsonl
 figures/*

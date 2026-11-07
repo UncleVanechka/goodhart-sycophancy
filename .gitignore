@@ -25,6 +25,7 @@ results/*
 !results/.gitkeep
 !results/baseline/
 !results/bon/
+!results/judge_check/
 results/baseline/*_responses.jsonl
 results/bon/*_samples.jsonl
 figures/*

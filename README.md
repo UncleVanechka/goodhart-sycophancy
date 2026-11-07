@@ -111,7 +111,7 @@ Plan, flow diagrams, results so far and the timeline live in
 - [x] Repository skeleton, configs, data schema, interfaces
 - [x] Dataset: 9 000 prompts (3 000 MMLU / ARC questions × 3 opinion types)
 - [x] Judge checked statistically (prefers agreement under a wrong opinion)
-- [ ] User simulator validated by hand on 50 examples
+- [x] User simulator checked on all Best-of-N samples and 50 read items — [docs/JUDGE_CHECK.md](docs/JUDGE_CHECK.md)
 - [x] Baseline for Qwen3-1.7B and Qwen3-4B
 - [x] Best-of-N curves for Qwen3-1.7B and Qwen3-4B (incl. delayed-reward sweep over α)
 - [ ] GRPO run

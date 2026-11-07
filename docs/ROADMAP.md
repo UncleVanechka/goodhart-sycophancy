@@ -227,10 +227,11 @@ the greedy baseline above.
 
 ## 6. Next steps, in order
 
-1. **Judge validation by hand** — 50 rated answers read by a human, on 4B
-   where the answers carry explanations: does the agreeable persona really
-   prefer agreement, and where does it fail? This answers "why is a simulated
-   user a valid proxy, and where is it not".
+1. **Judge validation** — done, see [JUDGE_CHECK.md](JUDGE_CHECK.md): the
+   persona prefers agreement by 3.6 points on bare answers (1.7B) and by only
+   1.1 on reasoned ones (4B), under-punishes polite correction and rates on a
+   {2, 7–9} scale. Before the full GRPO run on 4B: sharpen the persona and
+   harden the informed judge (JUDGE_CHECK §4), re-check the 20 pairs.
 2. **GRPO smoke** — `configs/grpo.yaml` overridden with `use_vllm: false`,
    `max_steps: 200` and `WANDB_MODE=offline` (the config itself still says
    vLLM, 600 steps, W&B online); stop if the proxy does not rise.

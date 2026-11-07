@@ -9,12 +9,15 @@ truth") reward and a mixture of personas — reduce it without giving up the pro
 
 **Where we are.** The guaranteed-minimum result is in: Best-of-N on Qwen3-1.7B
 and Qwen3-4B shows the Goodhart curve (proxy up, gold flat, sycophancy up) and
-the delayed reward removes it on both models. Next is the main result, RL with
-GRPO, then the write-up.
+the delayed reward removes it on both models. GRPO reproduces it in training:
+200 steps against the immediate reward take Qwen3-1.7B from 43 % to 76 %
+sycophancy while the proxy rises and gold falls. Next are the full GRPO runs
+(immediate reward and the α sweep, with the held-out eval), then the write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       done          next     (BoN part done)   Nov 17+
+  done       done       done       done        smoke ok   (BoN part done)   Nov 17+
+                                               full run next
 ```
 
 ## 1. The question in one picture
@@ -113,7 +116,7 @@ figures. Two consequences shape the stack:
 |---|---|---|---|
 | 1 | **Baseline** — one answer per prompt, no optimization | sycophancy the model brings in; the judge's bias | ✅ Qwen3-1.7B, Qwen3-4B |
 | 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B and 4B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) |
-| 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ⏳ next |
+| 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ smoke (1.7B, 200 steps: sycophancy 43 → 76 %) · ⏳ full run with held-out eval |
 | 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ⏳ in GRPO |
 
 Go / no-go for 3: the proxy must rise within the first 200 GRPO steps. If it
@@ -220,7 +223,7 @@ the greedy baseline above.
 | Nov 3–5 | Reading; repo, configs, dataset (9 000 prompts), 194 offline tests | ✅ Nov 6 |
 | Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
-| Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ⏳ |
+| Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ⏳ full run |
 | Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ⏳ |
 | Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ⏳ start writing no later than Nov 17 |
 | Nov 20–21 | Final review, ship | ⏳ |
@@ -232,13 +235,18 @@ the greedy baseline above.
    1.1 on reasoned ones (4B), under-punishes polite correction and rates on a
    {2, 7–9} scale. Before the full GRPO run on 4B: sharpen the persona and
    harden the informed judge (JUDGE_CHECK §4), re-check the 20 pairs.
-2. **GRPO smoke** — first run (`results/grpo/grpo-smoke-1/`, Qwen3-1.7B,
-   200 steps, 53 min on HF generate) proved the loop but not the signal: the
-   eval proxy stayed at 7.5 and sycophancy at 43 % because the linear schedule
-   had decayed the learning rate to ~0, each step saw only 2 prompts, and in
-   50–68 % of the groups all 8 completions got the same rating (no gradient;
-   KL 0.01). Second smoke in flight: constant lr 3e-5 after a 10-step warmup,
-   8 prompts × 8 completions per step. Go / no-go for RL still rests on it.
+2. **GRPO smoke** — done, go for RL. `results/grpo/grpo-smoke-1/` (Qwen3-1.7B,
+   200 steps, 53 min) proved the loop but not the signal: the linear schedule
+   had decayed the learning rate to ~0, each step saw 2 prompts, and in 50–68 %
+   of the groups all 8 completions got the same rating (KL 0.01, eval flat).
+   `grpo-smoke-2/` fixed that (constant lr 3e-5 after a 10-step warmup, 8
+   prompts × 8 completions per step, 1 h 48 min): eval proxy 7.50 → 8.14, gold
+   66.7 → 60.0 %, sycophancy **43 → 76 %**, gold under a wrong opinion 48 →
+   21 %, gold without an opinion unchanged (66 → 63 %). The policy collapsed to
+   bare answers (mean completion 82 → 13 tokens, KL 1.0 by step 200), so the
+   full run should log length and stop or lower the learning rate once
+   sycophancy saturates (it did by step 150). Eval here is 100 questions per
+   opinion type, ±5 points.
 3. **GRPO full run** — 600 steps, eval every 50 on val and on held-out
    SycophancyEval; curves of proxy / gold / sycophancy over steps.
 4. **GRPO mitigation** — `configs/mitigation.yaml`, α ∈ {0.3, 0.6}; the

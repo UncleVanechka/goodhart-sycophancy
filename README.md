@@ -114,7 +114,8 @@ Plan, flow diagrams, results so far and the timeline live in
 - [x] User simulator checked on all Best-of-N samples and 50 read items — [docs/JUDGE_CHECK.md](docs/JUDGE_CHECK.md)
 - [x] Baseline for Qwen3-1.7B and Qwen3-4B
 - [x] Best-of-N curves for Qwen3-1.7B and Qwen3-4B (incl. delayed-reward sweep over α)
-- [ ] GRPO run
+- [x] GRPO smoke on Qwen3-1.7B: proxy and sycophancy rise within 200 steps, gold falls
+- [ ] GRPO full runs with held-out SycophancyEval
 - [ ] Mitigation runs in GRPO
 - [ ] Write-up
 

@@ -114,6 +114,13 @@ Backends (`backend.py`):
   retries.
 - `VLLMBackend(base_url, model, ...)` — OpenAI-compatible `/chat/completions`
   via `urllib`/`httpx`, same prompt and parsing.
+- `HFJudgeBackend(model="Qwen/Qwen2.5-7B-Instruct", device="cuda", ...)` — the
+  judge in-process with `transformers` on the local GPU, for hosts that cannot
+  reach `api.anthropic.com`: chat template (system = persona, user = rating
+  prompt, `enable_thinking=False` by default), left-padded batches of
+  `batch_size`, greedy `generate(max_new_tokens=8)`, same parsing of the new
+  tokens only; a malformed reply scores 5 and increments `malformed` (logged
+  as a warning per batch) instead of raising.
 - `MockBackend()` — deterministic and offline, for tests: returns 9 when the
   response's parsed letter equals the persona's expectation (agreeable → the
   opinion letter if any, else gold; truth_seeking / informed → gold), 3 when it

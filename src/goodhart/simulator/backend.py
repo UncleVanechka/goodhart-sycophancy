@@ -1,9 +1,15 @@
-"""Scoring backends: the simulated user as an LLM judge, plus mock and cache wrappers."""
+"""Scoring backends: the simulated user as an LLM judge, plus mock and cache wrappers.
+
+Heavy imports (torch, transformers) happen inside methods so the module imports on a CPU box
+without them.
+"""
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
+import logging
 import random
 import re
 import sqlite3
@@ -27,6 +33,8 @@ _OUT_OF_TEN_RE = re.compile(r"\b(10|[1-9])\s*(?:/|out of)\s*10\b", re.IGNORECASE
 _THINKING_DISABLED_EFFORTS = frozenset({"low", "medium", "high"})
 _CHOICE_LINE_RE = re.compile(r"^\s*([A-E])[.)]\s", re.MULTILINE)
 _LETTER_RE = re.compile(r"\b([A-E])\b")
+
+LOGGER = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -289,6 +297,132 @@ class VLLMBackend(_RetryingBackend):
         return isinstance(exc, (urllib.error.URLError, TimeoutError))
 
 
+class HFJudgeBackend:
+    """Judge run locally with ``transformers`` on the same GPU as the policy.
+
+    Prompts are rendered through the chat template (system = persona, user = rating prompt),
+    tokenized with left padding in batches of ``batch_size`` and decoded greedily. Only the
+    newly generated tokens are parsed; a reply without a score falls back to
+    :attr:`MALFORMED_SCORE` and is counted in ``malformed``. Tokenizer and model load on first
+    use. ``gold`` is accepted for protocol compatibility only: the informed persona already
+    carries it in its system prompt.
+    """
+
+    MALFORMED_SCORE = 5.0
+
+    def __init__(
+        self,
+        model: str = "Qwen/Qwen2.5-7B-Instruct",
+        device: str = "cuda",
+        dtype: str = "bfloat16",
+        batch_size: int = 16,
+        max_new_tokens: int = 8,
+        chat_template_kwargs: dict[str, Any] | None = None,
+    ) -> None:
+        if batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
+        self.model = model
+        self.device = device
+        self.dtype = dtype
+        self.batch_size = batch_size
+        self.max_new_tokens = max_new_tokens
+        self.chat_template_kwargs: dict[str, Any] = (
+            dict(chat_template_kwargs)
+            if chat_template_kwargs is not None
+            else {"enable_thinking": False}
+        )
+        self.malformed = 0
+        self._model: Any = None
+        self._tokenizer: Any = None
+        self._inference_mode: Callable[[], Any] = contextlib.nullcontext
+
+    def _load(self) -> None:
+        if self._model is not None:
+            return
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        self._tokenizer = AutoTokenizer.from_pretrained(self.model, padding_side="left")
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+        torch_dtype = getattr(torch, self.dtype, torch.bfloat16)
+        self._model = AutoModelForCausalLM.from_pretrained(self.model, torch_dtype=torch_dtype)
+        self._model.to(self.device)
+        self._model.eval()
+        self._inference_mode = torch.inference_mode
+
+    def _render(self, persona: Persona, prompt: str, response: str) -> str:
+        messages = [
+            {"role": "system", "content": persona.system_prompt},
+            {"role": "user", "content": build_rating_prompt(prompt, response)},
+        ]
+        return self._tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, tokenize=False, **self.chat_template_kwargs
+        )
+
+    def _complete_batch(self, texts: Sequence[str]) -> list[str]:
+        """Greedy continuations for already rendered chat prompts, new tokens only."""
+        encoded = self._tokenizer(list(texts), return_tensors="pt", padding=True)
+        if hasattr(encoded, "to"):
+            encoded = encoded.to(self.device)
+        gen_kwargs: dict[str, Any] = {"max_new_tokens": self.max_new_tokens, "do_sample": False}
+        pad_token_id = getattr(self._tokenizer, "pad_token_id", None)
+        if pad_token_id is not None:
+            gen_kwargs["pad_token_id"] = pad_token_id
+        with self._inference_mode():
+            generated = self._model.generate(**encoded, **gen_kwargs)
+        prompt_len = encoded["input_ids"].shape[1]
+        return list(
+            self._tokenizer.batch_decode(generated[:, prompt_len:], skip_special_tokens=True)
+        )
+
+    def _parse_batch(self, replies: Sequence[str]) -> list[float]:
+        scores: list[float] = []
+        malformed = 0
+        for reply in replies:
+            try:
+                scores.append(clamp_score(parse_score(reply)))
+            except ValueError:
+                malformed += 1
+                scores.append(self.MALFORMED_SCORE)
+        if malformed:
+            self.malformed += malformed
+            LOGGER.warning(
+                "judge %s: %d of %d replies without a score, scored %.1f (total malformed %d)",
+                self.model,
+                malformed,
+                len(replies),
+                self.MALFORMED_SCORE,
+                self.malformed,
+            )
+        return scores
+
+    def score(self, persona: Persona, prompt: str, response: str, gold: str | None = None) -> float:
+        return self.score_batch(persona, [prompt], [response], [gold])[0]
+
+    def score_batch(
+        self,
+        persona: Persona,
+        prompts: Sequence[str],
+        responses: Sequence[str],
+        golds: Sequence[str | None] | None = None,
+    ) -> list[float]:
+        if len(prompts) != len(responses):
+            raise ValueError("prompts and responses must be aligned")
+        golds = list(golds) if golds is not None else [None] * len(prompts)
+        if len(golds) != len(prompts):
+            raise ValueError("golds must be aligned with prompts")
+        if not prompts:
+            return []
+        self._load()
+        texts = [self._render(persona, p, r) for p, r in zip(prompts, responses, strict=True)]
+        out: list[float] = []
+        for start in range(0, len(texts), self.batch_size):
+            batch = texts[start : start + self.batch_size]
+            out.extend(self._parse_batch(self._complete_batch(batch)))
+        return out
+
+
 class MockBackend(_ThreadedBackend):
     """Deterministic offline judge: 9 if the reply matches the persona's expectation, 3 if it
     contradicts it, 5 if no answer is parsed."""
@@ -399,6 +533,16 @@ def build_backend(cfg: dict) -> ScoringBackend:
             concurrency=int(sub.get("concurrency", 16)),
             max_retries=int(sub.get("max_retries", 3)),
             api_key=sub.get("api_key") or None,
+        )
+    elif kind == "hf":
+        sub = cfg.get("hf") or {}
+        backend = HFJudgeBackend(
+            model=sub.get("model", "Qwen/Qwen2.5-7B-Instruct"),
+            device=sub.get("device", "cuda"),
+            dtype=sub.get("dtype", "bfloat16"),
+            batch_size=int(sub.get("batch_size", 16)),
+            max_new_tokens=int(sub.get("max_new_tokens", 8)),
+            chat_template_kwargs=sub.get("chat_template_kwargs"),
         )
     elif kind == "mock":
         backend = MockBackend()

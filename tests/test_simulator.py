@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import random
+import sys
 import urllib.request
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from goodhart.simulator.backend import (
     AnthropicBackend,
     CachedBackend,
+    HFJudgeBackend,
     JudgeTruncatedError,
     MockBackend,
     ScoringBackend,
@@ -496,3 +500,168 @@ def test_build_reward_fn(records):
 
     with pytest.raises(ValueError):
         build_reward_fn({"reward": {"kind": "bribe"}}, stub)
+
+
+# --- HFJudgeBackend with fake tokenizer and model ------------------------------
+
+
+class _FakeTokenizer:
+    """Rendered prompts are kept in a side dict; one token id per prompt stands for its text."""
+
+    pad_token_id = 0
+
+    def __init__(self) -> None:
+        self.rendered: list[tuple[list[dict], dict]] = []
+        self.batches: list[list[str]] = []
+        self.prompts: dict[int, str] = {}
+        self.replies: dict[int, str] = {}
+
+    def apply_chat_template(self, messages, add_generation_prompt, tokenize, **kw):
+        self.rendered.append(
+            (messages, {"add_generation_prompt": add_generation_prompt, "tokenize": tokenize, **kw})
+        )
+        return f"<sys>{messages[0]['content']}<user>{messages[1]['content']}<assistant>"
+
+    def __call__(self, texts, return_tensors, padding):
+        assert return_tensors == "pt" and padding is True
+        self.batches.append(list(texts))
+        ids = []
+        for text in texts:
+            token = len(self.prompts) + 1
+            self.prompts[token] = text
+            ids.append([0, 0, token])
+        input_ids = np.array(ids)
+        return {"input_ids": input_ids, "attention_mask": (input_ids != 0).astype(int)}
+
+    def register_reply(self, text: str) -> int:
+        token = 1000 + len(self.replies)
+        self.replies[token] = text
+        return token
+
+    def batch_decode(self, ids, skip_special_tokens):
+        assert skip_special_tokens is True
+        return [self.replies[int(row[0])] for row in ids]
+
+
+class _FakeModel:
+    """Appends one token per row whose decoded text is ``reply_for(rendered prompt)``."""
+
+    def __init__(self, tokenizer: _FakeTokenizer, reply_for) -> None:
+        self.tokenizer = tokenizer
+        self.reply_for = reply_for
+        self.calls: list[dict] = []
+
+    def generate(self, input_ids, attention_mask, **kwargs):
+        self.calls.append(dict(kwargs, rows=input_ids.shape[0]))
+        new = [
+            [self.tokenizer.register_reply(self.reply_for(self.tokenizer.prompts[int(token)]))]
+            for token in input_ids[:, -1]
+        ]
+        return np.concatenate([input_ids, np.array(new)], axis=1)
+
+
+def _reply_by_answer(text: str) -> str:
+    return '{"score": 9}' if "Answer: B" in text else '{"score": 3}'
+
+
+def _hf_backend(monkeypatch, reply_for=_reply_by_answer, **kwargs):
+    backend = HFJudgeBackend(**kwargs)
+    tokenizer = _FakeTokenizer()
+    model = _FakeModel(tokenizer, reply_for)
+
+    def fake_load():
+        backend._tokenizer = tokenizer
+        backend._model = model
+
+    monkeypatch.setattr(backend, "_load", fake_load)
+    return backend, tokenizer, model
+
+
+def test_hf_judge_backend_batches_greedily_and_parses_new_tokens(monkeypatch):
+    backend, tokenizer, model = _hf_backend(monkeypatch, batch_size=2)
+    persona = get_persona("agreeable")
+    responses = ["Answer: B", "Answer: A", "Answer: B", "I pass.", "Answer: B"]
+    out = backend.score_batch(persona, ["Q?"] * 5, responses)
+    assert out == [9.0, 3.0, 9.0, 3.0, 9.0]
+    assert [len(b) for b in tokenizer.batches] == [2, 2, 1]
+    assert [c["rows"] for c in model.calls] == [2, 2, 1]
+    assert all(
+        c["max_new_tokens"] == 8 and c["do_sample"] is False and c["pad_token_id"] == 0
+        for c in model.calls
+    )
+    messages, kwargs = tokenizer.rendered[0]
+    assert messages[0] == {"role": "system", "content": persona.system_prompt}
+    assert messages[1]["role"] == "user"
+    assert messages[1]["content"] == build_rating_prompt("Q?", "Answer: B")
+    assert kwargs == {"add_generation_prompt": True, "tokenize": False, "enable_thinking": False}
+    assert backend.malformed == 0
+
+
+def test_hf_judge_backend_score_gold_and_alignment(monkeypatch):
+    backend, tokenizer, _ = _hf_backend(monkeypatch)
+    informed = get_persona("agreeable_informed", gold="B")
+    assert backend.score(informed, "Q?", "Answer: B", "B") == 9.0
+    assert backend.score(informed, "Q?", "Answer: A", gold="B") == 3.0
+    messages, _ = tokenizer.rendered[0]
+    assert "correct answer is B" in messages[0]["content"]
+    assert "B" not in messages[1]["content"].replace("Answer: B", "")
+    assert backend.score_batch(informed, [], []) == []
+    with pytest.raises(ValueError):
+        backend.score_batch(informed, ["Q?", "Q?"], ["a"])
+    with pytest.raises(ValueError, match="golds"):
+        backend.score_batch(informed, ["Q?", "Q?"], ["a", "b"], ["B"])
+    with pytest.raises(ValueError):
+        HFJudgeBackend(batch_size=0)
+
+
+def test_hf_judge_backend_malformed_falls_back_and_counts(monkeypatch, caplog):
+    replies = iter(['{"score": 7}', "I cannot rate this.", "", "8/10"])
+    backend, _, _ = _hf_backend(monkeypatch, reply_for=lambda _text: next(replies), batch_size=4)
+    with caplog.at_level(logging.WARNING, logger="goodhart.simulator.backend"):
+        out = backend.score_batch(get_persona("agreeable"), ["Q?"] * 4, ["a", "b", "c", "d"])
+    assert out == [7.0, 5.0, 5.0, 8.0]
+    assert backend.malformed == 2
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "2 of 4" in warnings[0].getMessage()
+
+
+def test_hf_judge_backend_lazy_load_only_when_scoring(monkeypatch):
+    backend = HFJudgeBackend()
+    monkeypatch.setattr(backend, "_load", lambda: pytest.fail("loaded without work"))
+    assert backend.score_batch(get_persona("agreeable"), [], []) == []
+    assert backend.chat_template_kwargs == {"enable_thinking": False}
+    assert HFJudgeBackend(chat_template_kwargs={}).chat_template_kwargs == {}
+
+
+def test_build_backend_hf_without_torch(tmp_path):
+    cfg = {
+        "backend": "hf",
+        "hf": {
+            "model": "Qwen/Qwen3-8B",
+            "device": "cuda:1",
+            "dtype": "float16",
+            "batch_size": "4",
+            "max_new_tokens": 16,
+            "chat_template_kwargs": {"enable_thinking": False, "foo": 1},
+        },
+    }
+    backend = build_backend(cfg)
+    assert isinstance(backend, HFJudgeBackend)
+    assert backend.model == "Qwen/Qwen3-8B"
+    assert backend.device == "cuda:1"
+    assert backend.dtype == "float16"
+    assert backend.batch_size == 4
+    assert backend.max_new_tokens == 16
+    assert backend.chat_template_kwargs == {"enable_thinking": False, "foo": 1}
+    assert "torch" not in sys.modules and "transformers" not in sys.modules
+    defaults = build_backend({"backend": "hf"})
+    assert isinstance(defaults, HFJudgeBackend)
+    assert defaults.model == "Qwen/Qwen2.5-7B-Instruct"
+    assert defaults.device == "cuda" and defaults.dtype == "bfloat16"
+    assert defaults.batch_size == 16 and defaults.max_new_tokens == 8
+    assert defaults.chat_template_kwargs == {"enable_thinking": False}
+    cached = build_backend({"backend": "hf", "hf": {}, "cache": str(tmp_path / "c.sqlite")})
+    assert isinstance(cached, CachedBackend)
+    assert isinstance(cached.inner, HFJudgeBackend)
+    cached.close()

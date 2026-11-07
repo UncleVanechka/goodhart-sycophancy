@@ -1,5 +1,5 @@
 # goodhart.simulator — the simulated user that produces the proxy reward
-backend: anthropic      # anthropic | vllm | mock
+backend: anthropic      # anthropic | vllm | hf | mock
 
 anthropic:
   model: claude-haiku-5-5
@@ -13,6 +13,17 @@ vllm:
   model: Qwen/Qwen2.5-7B-Instruct
   max_tokens: 64
   concurrency: 16
+
+# Judge run in-process with transformers on the local GPU: the backend to use on hosts
+# where api.anthropic.com is unreachable
+hf:
+  model: Qwen/Qwen2.5-7B-Instruct
+  device: cuda
+  dtype: bfloat16
+  batch_size: 16
+  max_new_tokens: 8                # {"score": N} fits; nothing left for prose
+  chat_template_kwargs:
+    enable_thinking: false         # Qwen3 judges answer without a thinking block
 
 # Default persona for the immediate reward. See goodhart.simulator.persona
 persona: agreeable

@@ -23,8 +23,8 @@ grpo:
   max_steps: 600
   per_device_train_batch_size: 8
   gradient_accumulation_steps: 2
-  max_prompt_length: 512
   max_completion_length: 512
+  chat_template_kwargs: {enable_thinking: false}
   beta: 0.04            # KL coefficient
   temperature: 1.0
   use_vllm: true

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import dataclasses
 import json
 import logging
 import random
@@ -170,11 +171,20 @@ def read_curve(path: str | Path) -> list[dict]:
 
 
 def greedy_generate(
-    model: Any, tokenizer: Any, prompts: list[str], max_new_tokens: int, batch_size: int = 16
+    model: Any,
+    tokenizer: Any,
+    prompts: list[str],
+    max_new_tokens: int,
+    batch_size: int = 16,
+    chat_template_kwargs: dict[str, Any] | None = None,
 ) -> list[str]:
-    """Batched greedy decoding of chat prompts through an HF model and tokenizer."""
+    """Batched greedy decoding of chat prompts through an HF model and tokenizer.
+
+    ``chat_template_kwargs`` reach the chat template (``enable_thinking=False`` on Qwen3).
+    """
     import torch
 
+    template_kwargs = dict(chat_template_kwargs or {})
     device = next(model.parameters()).device
     padding_side = tokenizer.padding_side
     tokenizer.padding_side = "left"
@@ -191,6 +201,7 @@ def greedy_generate(
                     [{"role": "user", "content": prompt}],
                     tokenize=False,
                     add_generation_prompt=True,
+                    **template_kwargs,
                 )
                 for prompt in chunk
             ]
@@ -230,6 +241,7 @@ def make_eval_callback(
     every = int(cfg["eval"]["every_steps"])
     max_new_tokens = int(cfg["grpo"].get("max_completion_length", 512))
     batch_size = int(cfg["eval"].get("batch_size", 16))
+    template_kwargs = dict(cfg["grpo"].get("chat_template_kwargs") or {})
 
     class EvalCallback(TrainerCallback):
         """Periodic greedy evaluation on the validation and held-out sets."""
@@ -242,7 +254,9 @@ def make_eval_callback(
 
         def evaluate(self, step: int, model: Any, tokenizer: Any) -> dict[str, Any]:
             def generate(prompts: list[str]) -> list[str]:
-                return greedy_generate(model, tokenizer, prompts, max_new_tokens, batch_size)
+                return greedy_generate(
+                    model, tokenizer, prompts, max_new_tokens, batch_size, template_kwargs
+                )
 
             point: dict[str, Any] = {"step": int(step)}
             point.update(evaluate_records(generate, val_records, reward_fn))
@@ -387,10 +401,16 @@ def train_one(
     log = None if build_grpo_kwargs(cfg, run_name)["report_to"] == "none" else _wandb_log
     reward = make_reward_fn(records_by_id, reward_fn, log=log)
     callback = make_eval_callback(cfg, curve_path, val_records, reward_fn, heldout_records, log=log)
+    grpo_kwargs = build_grpo_kwargs(cfg, run_name)
+    known = {field.name for field in dataclasses.fields(GRPOConfig)}
+    unknown = sorted(key for key in grpo_kwargs if key not in known)
+    if unknown:
+        LOGGER.warning("dropping grpo keys this TRL version does not accept: %s", unknown)
+        grpo_kwargs = {key: value for key, value in grpo_kwargs.items() if key in known}
     trainer = GRPOTrainer(
         model=cfg["model"],
         reward_funcs=reward,
-        args=GRPOConfig(**build_grpo_kwargs(cfg, run_name)),
+        args=GRPOConfig(**grpo_kwargs),
         train_dataset=Dataset.from_list(train_rows),
         peft_config=build_lora_config(cfg),
         callbacks=[callback],

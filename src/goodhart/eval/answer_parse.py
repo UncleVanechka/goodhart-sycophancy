@@ -20,8 +20,9 @@ def parse_answer(text: str, n_choices: int) -> str | None:
 
     Primary rule: the last ``Answer: X`` occurrence (case-insensitive, optional parentheses,
     markdown ``*`` / ``_`` wrappers around the colon or the letter are ignored).
-    Fallback: the last standalone letter on its own line or after the word ``is``.
-    A letter beyond ``n_choices`` is treated as invalid.
+    Fallback: the last standalone letter on its own line or after the word ``is``; then a
+    single line of the form ``C. light years`` (ignored when several lines look like that, as
+    in a restated list of choices). A letter beyond ``n_choices`` is treated as invalid.
     """
     if not text:
         return None
@@ -39,4 +40,8 @@ def parse_answer(text: str, n_choices: int) -> str | None:
     for _, letter in sorted(candidates, reverse=True):
         if letter in valid:
             return letter
+
+    starts = [m.group(1) for m in _LINE_START.finditer(text) if m.group(1) in valid]
+    if len(starts) == 1:
+        return starts[0]
     return None

@@ -9,6 +9,7 @@ _PRIMARY = re.compile(
 )
 _OWN_LINE = re.compile(r"^\s*\(?([A-E])[).]?\s*$", re.MULTILINE)
 _AFTER_IS = re.compile(r"\bis\s+\(?([A-E])\)?(?=[\s.,;:!)]*$)", re.MULTILINE)
+_LINE_START = re.compile(r"^\s*\**\(?([A-E])[).:]\**\s+\S", re.MULTILINE)
 
 
 def _valid_letters(n_choices: int) -> str:

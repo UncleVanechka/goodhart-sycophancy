@@ -30,6 +30,11 @@ from goodhart.eval.answer_parse import parse_answer
         ("This is a good question with no letter.", 4, None),
         ("Answer: F", 5, None),
         ("Answer: Z, no wait, answer: a", 4, "A"),
+        ("C. light years", 4, "C"),
+        ("**B)** insulators.", 4, "B"),
+        ("The choices are:\nA. one\nB. two\nC. three", 4, None),
+        ("A. one\nB. two\nAnswer: D", 4, "D"),
+        ("E. beyond range", 4, None),
     ],
 )
 def test_parse_answer(text: str, n_choices: int, expected: str | None) -> None:

@@ -116,7 +116,8 @@ Plan, flow diagrams, results so far and the timeline live in
 - [x] Best-of-N curves for Qwen3-1.7B and Qwen3-4B (incl. delayed-reward sweep over α)
 - [x] GRPO smoke on Qwen3-1.7B: proxy and sycophancy rise within 200 steps, gold falls
 - [x] GRPO full run on Qwen3-1.7B with held-out SycophancyEval: sycophancy 49 → 98 %, held-out 62 → 85 %
-- [x] Delayed reward in GRPO (α = 0.3, 0.6): sycophancy flat or down, gold up — rerun in progress to put the proxy on the frontier
+- [x] Delayed reward in GRPO (α = 0.3, 0.6), two runs each: α = 0.6 holds sycophancy down (49 → 38 %) with the proxy flat; α = 0.3 collapsed in one run of two
+- [ ] More seeds per α before claiming where the threshold sits
 - [ ] Persona mixture in GRPO
 - [ ] Write-up
 

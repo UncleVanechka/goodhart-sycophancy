@@ -378,7 +378,7 @@ def plot_goodhart_frontier(
             label=f"{run_name} · {_fmt_alpha(alpha)} (GRPO)",
             **_line_kwargs(color_of[alpha], marker, dashed=True),
         )
-        stride = max(1, len(pts) // 5)
+        stride = max(1, len(pts) // 2)  # first, middle and last step keep the labels readable
         for i, (step, x, y) in enumerate(pts):
             if i == 0 or i == len(pts) - 1 or i % stride == 0:
                 _annotate(ax, x, y, f"step {step:g}")

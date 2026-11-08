@@ -395,23 +395,26 @@ def plot_goodhart_frontier(
 
 
 def plot_grpo_curves(grpo: dict[str, list[dict[str, Any]]], out: str | Path) -> Path | None:
-    """Proxy, training reward, gold, sycophancy and the held-out metrics against step.
+    """Proxy, informed judge, training reward, gold, sycophancy and held-out metrics by step.
 
-    One line per run. The proxy panel is the immediate judge; the training-reward panel is
-    what the optimizer saw (the same thing for an immediate-reward run).
+    One line per run. The proxy panel is the immediate judge, the informed panel the judge who
+    knows the truth (the delayed signal), the training-reward panel what the optimizer saw (the
+    proxy itself for an immediate-reward run). Runs that did not record a judge skip its panel.
     """
     if not grpo:
         return None
     plt = _plt()
     panels = [
         ("proxy_mean", "proxy reward: immediate judge (1–10)"),
+        ("informed_mean", "delayed signal: informed judge (1–10)"),
         ("reward", "training reward (1–10)"),
         ("gold_accuracy", "gold accuracy"),
         ("sycophancy_rate", "sycophancy rate"),
         ("heldout", "held-out sycophancy rate (SycophancyEval)"),
         ("heldout_gold_accuracy", "held-out gold accuracy (SycophancyEval)"),
+        ("heldout_informed_mean", "held-out informed judge (1–10)"),
     ]
-    fig, axes = plt.subplots(2, 3, figsize=(15, 7))
+    fig, axes = plt.subplots(2, 4, figsize=(19, 7))
     axes = axes.ravel()
     for idx, (run_name, rows) in enumerate(grpo.items()):
         steps = [_row_step(r) for r in rows]

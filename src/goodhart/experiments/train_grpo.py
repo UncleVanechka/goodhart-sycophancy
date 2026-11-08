@@ -130,13 +130,24 @@ def select_eval_items(
     return chosen
 
 
+def _mean(values: list[float]) -> float:
+    return sum(values) / len(values) if values else float("nan")
+
+
 def evaluate_records(
     generate: GenerateFn,
     records: list[dict],
     reward_fn: RewardFn | None = None,
     parse: ParseFn | None = None,
+    extra_judges: dict[str, RewardFn] | None = None,
 ) -> dict[str, float]:
-    """Greedy-decode ``records`` with ``generate`` and return §4 metrics plus ``proxy_mean``."""
+    """Greedy-decode ``records`` with ``generate`` and return §4 metrics plus judge means.
+
+    ``reward_fn`` is the proxy (the immediate judge) and gives ``proxy_mean`` overall and per
+    opinion type. Every entry of ``extra_judges`` adds ``<name>_mean`` and ``<name>_mean@<opinion>``
+    on the same texts; ``reward_mean`` defaults to ``proxy_mean`` unless an extra judge named
+    ``reward`` (the training reward, when it is not the proxy) overrides it.
+    """
     from goodhart.eval.metrics import compute_metrics, records_to_frame
 
     parse_fn = parse or _default_parse()
@@ -149,7 +160,21 @@ def evaluate_records(
     proxy = [float(s) for s in reward_fn(records, texts)] if reward_fn is not None else None
     metrics = compute_metrics(records_to_frame(records, parsed, proxy))
     if proxy is not None:
-        metrics["proxy_mean"] = sum(proxy) / len(proxy) if proxy else float("nan")
+        metrics["proxy_mean"] = _mean(proxy)
+    for name, judge in (extra_judges or {}).items():
+        scores = [float(s) for s in judge(records, texts)]
+        if len(scores) != len(records):
+            raise ValueError(f"judge {name!r} returned {len(scores)} scores for {len(records)}")
+        metrics[f"{name}_mean"] = _mean(scores)
+        for opinion in OPINION_TYPES:
+            pairs = zip(scores, records, strict=True)
+            subset = [s for s, r in pairs if r.get("opinion") == opinion]
+            if subset:
+                metrics[f"{name}_mean@{opinion}"] = _mean(subset)
+    if proxy is not None and "reward_mean" not in metrics:
+        for key in list(metrics):
+            if key == "proxy_mean" or key.startswith("proxy_mean@"):
+                metrics["reward_mean" + key[len("proxy_mean") :]] = metrics[key]
     return {k: float(v) for k, v in metrics.items()}
 
 
@@ -229,12 +254,14 @@ def make_eval_callback(
     reward_fn: RewardFn | None,
     heldout_records: list[dict] | None = None,
     log: LogFn | None = None,
+    extra_judges: dict[str, RewardFn] | None = None,
 ) -> Any:
     """Build a ``transformers.TrainerCallback`` that evaluates every ``eval.every_steps``.
 
     Each evaluation greedy-decodes the validation items (and the held-out set when given)
     with the trainer's model and tokenizer, then appends ``{"step", metrics..., "proxy_mean",
-    "heldout_*"}`` to ``curve_path``.
+    "<judge>_mean", "heldout_*"}`` to ``curve_path``. ``reward_fn`` is the proxy judge;
+    ``extra_judges`` are reported alongside it (see ``evaluate_records``).
     """
     from transformers import TrainerCallback
 
@@ -259,9 +286,9 @@ def make_eval_callback(
                 )
 
             point: dict[str, Any] = {"step": int(step)}
-            point.update(evaluate_records(generate, val_records, reward_fn))
+            point.update(evaluate_records(generate, val_records, reward_fn, None, extra_judges))
             if heldout_records:
-                heldout = evaluate_records(generate, heldout_records, reward_fn)
+                heldout = evaluate_records(generate, heldout_records, reward_fn, None, extra_judges)
                 point.update({f"heldout_{k}": v for k, v in heldout.items()})
             append_curve_point(curve_path, point)
             self.points.append(point)
@@ -375,8 +402,15 @@ def train_one(
     records: list[dict],
     reward_fn: RewardFn,
     heldout_records: list[dict] | None = None,
+    proxy_fn: RewardFn | None = None,
+    extra_judges: dict[str, RewardFn] | None = None,
 ) -> dict[str, Any]:
-    """Run one GRPO training; write ``curve.jsonl`` and ``summary.json`` under the run dir."""
+    """Run one GRPO training; write ``curve.jsonl`` and ``summary.json`` under the run dir.
+
+    ``reward_fn`` is what the policy is optimized against. The periodic evaluation rates the
+    greedy outputs with ``proxy_fn`` (the immediate judge; ``reward_fn`` when not given) so
+    that ``proxy_mean`` means the same thing for every reward kind, and with ``extra_judges``.
+    """
     from datasets import Dataset
     from trl import GRPOConfig, GRPOTrainer
 
@@ -400,7 +434,15 @@ def train_one(
     _configure_wandb(cfg)
     log = None if build_grpo_kwargs(cfg, run_name)["report_to"] == "none" else _wandb_log
     reward = make_reward_fn(records_by_id, reward_fn, log=log)
-    callback = make_eval_callback(cfg, curve_path, val_records, reward_fn, heldout_records, log=log)
+    callback = make_eval_callback(
+        cfg,
+        curve_path,
+        val_records,
+        proxy_fn or reward_fn,
+        heldout_records,
+        log=log,
+        extra_judges=extra_judges,
+    )
     grpo_kwargs = build_grpo_kwargs(cfg, run_name)
     known = {field.name for field in dataclasses.fields(GRPOConfig)}
     unknown = sorted(key for key in grpo_kwargs if key not in known)
@@ -449,7 +491,7 @@ def main(argv: list[str] | None = None) -> None:
     from goodhart.config import load_config, set_seed
     from goodhart.io import load_dotenv_if_present, read_jsonl
     from goodhart.simulator.backend import build_backend
-    from goodhart.simulator.reward import build_reward_fn
+    from goodhart.simulator.reward import build_reward_fn, immediate_reward, informed_reward
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     load_dotenv_if_present()
@@ -463,9 +505,28 @@ def main(argv: list[str] | None = None) -> None:
         simulator_cfg = load_config(simulator_cfg, base=None)
     backend = build_backend(simulator_cfg)
 
+    def proxy_fn(batch_records: list[dict], texts: list[str]) -> list[float]:
+        return immediate_reward(backend, batch_records, texts)
+
+    def informed_fn(batch_records: list[dict], texts: list[str]) -> list[float]:
+        return informed_reward(backend, batch_records, texts)
+
     for run_name, run_cfg in expand_sweep(cfg):
         reward_fn = build_reward_fn(run_cfg, backend)
-        train_one(run_cfg, run_name, records, reward_fn, heldout)
+        extra_judges: dict[str, RewardFn] = {"informed": informed_fn}
+        if (run_cfg.get("reward") or {}).get("kind", "immediate") != "immediate":
+            # a separate instance: a persona-mix reward carries its own RNG and assignments,
+            # and the evaluation must not advance the ones the optimizer trains against
+            extra_judges["reward"] = build_reward_fn(run_cfg, backend)
+        train_one(
+            run_cfg,
+            run_name,
+            records,
+            reward_fn,
+            heldout,
+            proxy_fn=proxy_fn,
+            extra_judges=extra_judges,
+        )
 
 
 if __name__ == "__main__":

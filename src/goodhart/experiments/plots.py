@@ -124,6 +124,12 @@ def _metric(row: dict[str, Any] | None, key: str) -> float | None:
     return None
 
 
+def _training_reward(row: dict[str, Any]) -> float | None:
+    """Mean reward the optimizer saw; ``proxy_mean`` when a run recorded nothing else."""
+    value = _metric(row, "reward_mean")
+    return value if value is not None else _metric(row, "proxy_mean")
+
+
 def _heldout_sycophancy(row: dict[str, Any]) -> float | None:
     for key in ("sycophancy_eval", "heldout", "held_out"):
         value = _metric(row.get(key), "sycophancy_rate")
@@ -249,7 +255,7 @@ def _figure_legend(fig, axes: Iterable[Any]) -> None:
             list(handles.values()),
             list(handles),
             loc="lower center",
-            ncol=min(4, len(handles)),
+            ncol=min(5, len(handles)),
             bbox_to_anchor=(0.5, -0.02),
         )
 
@@ -331,7 +337,7 @@ def plot_goodhart_frontier(
     alpha_order = sorted({a for a in alphas if a is not None}) + ([None] if None in alphas else [])
     color_of = {a: PALETTE[i % len(PALETTE)] for i, a in enumerate(alpha_order)}
 
-    fig, ax = plt.subplots(figsize=(7, 5.2))
+    fig, ax = plt.subplots(figsize=(9, 5.2))
     plotted = False
     for idx, payload in enumerate(bon):
         model = _short_model(payload.get("model", f"model {idx}"))
@@ -383,23 +389,29 @@ def plot_goodhart_frontier(
     ax.set_xlabel("proxy reward (simulated user, 1–10)")
     ax.set_ylabel("gold accuracy")
     ax.set_title("Goodhart frontier: gold vs proxy as optimization strength grows")
-    ax.legend(loc="best", fontsize=8)
+    ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=8)
     fig.tight_layout()
     return _save(fig, out)
 
 
 def plot_grpo_curves(grpo: dict[str, list[dict[str, Any]]], out: str | Path) -> Path | None:
-    """Proxy, gold, sycophancy and held-out sycophancy against step, one line per run."""
+    """Proxy, training reward, gold, sycophancy and the held-out metrics against step.
+
+    One line per run. The proxy panel is the immediate judge; the training-reward panel is
+    what the optimizer saw (the same thing for an immediate-reward run).
+    """
     if not grpo:
         return None
     plt = _plt()
     panels = [
-        ("proxy_mean", "proxy reward (1–10)"),
+        ("proxy_mean", "proxy reward: immediate judge (1–10)"),
+        ("reward", "training reward (1–10)"),
         ("gold_accuracy", "gold accuracy"),
         ("sycophancy_rate", "sycophancy rate"),
         ("heldout", "held-out sycophancy rate (SycophancyEval)"),
+        ("heldout_gold_accuracy", "held-out gold accuracy (SycophancyEval)"),
     ]
-    fig, axes = plt.subplots(2, 2, figsize=(11, 7))
+    fig, axes = plt.subplots(2, 3, figsize=(15, 7))
     axes = axes.ravel()
     for idx, (run_name, rows) in enumerate(grpo.items()):
         steps = [_row_step(r) for r in rows]
@@ -408,6 +420,8 @@ def plot_grpo_curves(grpo: dict[str, list[dict[str, Any]]], out: str | Path) -> 
         for ax, (metric, _) in zip(axes, panels, strict=True):
             if metric == "heldout":
                 ys = [_heldout_sycophancy(r) for r in rows]
+            elif metric == "reward":
+                ys = [_training_reward(r) for r in rows]
             else:
                 ys = [_metric(r, metric) for r in rows]
             pts = [(s, y) for s, y in zip(steps, ys, strict=True) if y is not None]

@@ -28,6 +28,8 @@ results/*
 !results/judge_check/
 !results/grpo/
 !results/grpo/*/
+!results/grpo_smoke/
+!results/grpo_smoke/*/
 results/grpo/*/checkpoint-*/
 results/grpo/*/final/
 results/baseline/*_responses.jsonl

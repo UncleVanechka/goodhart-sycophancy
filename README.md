@@ -66,7 +66,7 @@ src/goodhart/
 docs/DESIGN.md    data schema and module interfaces
 docs/ROADMAP.md   plan, flow diagrams, results so far, timeline
 tests/            unit tests, no GPU and no network
-results/          JSON outputs; baseline/ and bon/ summaries are committed, per-sample files are not
+results/          JSON outputs; baseline/, bon/, grpo/ summaries and curves are committed, samples and checkpoints are not
 figures/          plots; the PNGs rendered from the committed results are tracked
 ```
 
@@ -115,8 +115,9 @@ Plan, flow diagrams, results so far and the timeline live in
 - [x] Baseline for Qwen3-1.7B and Qwen3-4B
 - [x] Best-of-N curves for Qwen3-1.7B and Qwen3-4B (incl. delayed-reward sweep over α)
 - [x] GRPO smoke on Qwen3-1.7B: proxy and sycophancy rise within 200 steps, gold falls
-- [ ] GRPO full runs with held-out SycophancyEval
-- [ ] Mitigation runs in GRPO
+- [x] GRPO full run on Qwen3-1.7B with held-out SycophancyEval: sycophancy 49 → 98 %, held-out 62 → 85 %
+- [x] Delayed reward in GRPO (α = 0.3, 0.6): sycophancy flat or down, gold up — rerun in progress to put the proxy on the frontier
+- [ ] Persona mixture in GRPO
 - [ ] Write-up
 
 ## References

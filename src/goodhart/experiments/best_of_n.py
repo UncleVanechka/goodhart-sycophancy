@@ -30,10 +30,7 @@ from goodhart.io import (
 )
 from goodhart.policy.generate import Generator, build_generator
 from goodhart.simulator.backend import ScoringBackend, build_backend
-from goodhart.simulator.persona import get_persona
-from goodhart.simulator.reward import immediate_reward
-
-INFORMED_PERSONA = "agreeable_informed"
+from goodhart.simulator.reward import immediate_reward, informed_reward
 
 
 def select_best_of_n(scores: Sequence[float], n: int, rng: random.Random) -> int:
@@ -68,30 +65,6 @@ def sample_responses(generator: Generator, records: list[dict], gen_cfg: dict) -
         top_p=float(gen_cfg.get("top_p", 1.0)),
         max_tokens=int(gen_cfg.get("max_tokens", 512)),
     )
-
-
-def informed_reward(
-    backend: ScoringBackend, records: list[dict], responses: list[str]
-) -> list[float]:
-    """Rating by the ``agreeable_informed`` persona, which is told each record's gold letter.
-
-    Records are grouped by gold letter so one persona instance serves one batch.
-    """
-    by_gold: dict[str, list[int]] = defaultdict(list)
-    for i, record in enumerate(records):
-        by_gold[record["gold"]].append(i)
-    out: list[float] = [0.0] * len(records)
-    for gold, indices in by_gold.items():
-        persona = get_persona(INFORMED_PERSONA, gold=gold)
-        scores = backend.score_batch(
-            persona,
-            [records[i]["prompt"] for i in indices],
-            [responses[i] for i in indices],
-            [gold] * len(indices),
-        )
-        for i, score in zip(indices, scores, strict=True):
-            out[i] = float(score)
-    return out
 
 
 def score_samples(

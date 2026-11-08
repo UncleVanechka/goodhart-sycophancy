@@ -57,6 +57,14 @@ def immediate_reward(
     return _score_all(backend, "agreeable", records, responses)
 
 
+def informed_reward(
+    backend: ScoringBackend, records: Sequence[dict], responses: Sequence[str]
+) -> list[float]:
+    """Rating by the agreeable user after being told the gold answer (the delayed signal)."""
+    _check_aligned(records, responses)
+    return _score_all(backend, "agreeable_informed", records, responses)
+
+
 def delayed_reward(
     backend: ScoringBackend, records: Sequence[dict], responses: Sequence[str], alpha: float
 ) -> list[float]:

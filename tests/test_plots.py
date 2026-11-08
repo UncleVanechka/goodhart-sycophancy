@@ -192,3 +192,23 @@ def test_main_on_empty_results(tmp_path: Path) -> None:
     out = tmp_path / "figures"
     assert plots.main(["--results", str(tmp_path / "results"), "--out", str(out)]) == []
     assert not out.exists() or not list(out.glob("*.png"))
+
+
+def test_training_reward_prefers_reward_mean_over_proxy() -> None:
+    assert plots._training_reward({"reward_mean": 5.0, "proxy_mean": 9.0}) == 5.0
+    assert plots._training_reward({"proxy_mean": 9.0}) == 9.0
+    assert plots._training_reward({"gold_accuracy": 0.5}) is None
+
+
+def test_frontier_skips_runs_without_proxy(tmp_path: Path) -> None:
+    """A run that recorded only the training reward has no proxy axis and is left out."""
+    immediate = [{"step": s, "proxy_mean": 7.0 + s / 100, "gold_accuracy": 0.6} for s in (0, 50)]
+    delayed = [{"step": s, "reward_mean": 7.0 + s / 100, "gold_accuracy": 0.7} for s in (0, 50)]
+    out = plots.plot_goodhart_frontier(
+        [], {"grpo-immediate": immediate, "grpo-delayed-a0.3": delayed}, tmp_path / "f.png"
+    )
+    _assert_png(out)
+    curves = plots.plot_grpo_curves(
+        {"grpo-immediate": immediate, "grpo-delayed-a0.3": delayed}, tmp_path / "c.png"
+    )
+    _assert_png(curves)

@@ -1,6 +1,6 @@
 # Roadmap
 
-*Updated 2026-11-07. Hard deadline for the write-up: **2026-11-21**.*
+*Updated 2026-11-08. Hard deadline for the write-up: **2026-11-21**.*
 
 One sentence: optimizing an LLM against the approval of a simulated user breeds
 sycophancy the way optimizing a feed for clicks breeds clickbait, and we test
@@ -9,15 +9,19 @@ truth") reward and a mixture of personas — reduce it without giving up the pro
 
 **Where we are.** The guaranteed-minimum result is in: Best-of-N on Qwen3-1.7B
 and Qwen3-4B shows the Goodhart curve (proxy up, gold flat, sycophancy up) and
-the delayed reward removes it on both models. GRPO reproduces it in training:
-200 steps against the immediate reward take Qwen3-1.7B from 43 % to 76 %
-sycophancy while the proxy rises and gold falls. Next are the full GRPO runs
-(immediate reward and the α sweep, with the held-out eval), then the write-up.
+the delayed reward removes it on both models. GRPO amplifies it in training:
+300 steps against the immediate reward take Qwen3-1.7B from 49 % to 98 %
+sycophancy, gold falls from 65 % to 54 %, and the effect transfers to the
+held-out SycophancyEval benchmark (62 → 85 %). The delayed reward in training
+holds sycophancy flat (α = 0.3) or pushes it down (α = 0.6: 49 → 37 %) with gold
+slightly up. Those two runs recorded the training reward instead of the
+immediate-judge proxy on their eval curve, so they are being rerun with the
+fixed evaluation to place them on the frontier; then the write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       done        smoke ok   (BoN part done)   Nov 17+
-                                               full run next
+  done       done       done       done        done      done, rerun for     Nov 17+
+                                                         the proxy axis
 ```
 
 ## 1. The question in one picture
@@ -116,8 +120,8 @@ figures. Two consequences shape the stack:
 |---|---|---|---|
 | 1 | **Baseline** — one answer per prompt, no optimization | sycophancy the model brings in; the judge's bias | ✅ Qwen3-1.7B, Qwen3-4B |
 | 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B and 4B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) |
-| 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ smoke (1.7B, 200 steps: sycophancy 43 → 76 %) · ⏳ full run with held-out eval |
-| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ⏳ in GRPO |
+| 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ 1.7B, 300 steps: sycophancy 49 → 98 %, held-out 62 → 85 % (§4.3) |
+| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO (§4.3) · ⏳ rerun with the immediate-judge proxy on the eval curve |
 
 Go / no-go for 3: the proxy must rise within the first 200 GRPO steps. If it
 does not by **Nov 13**, RL is dropped and the project ships on experiments 1
@@ -216,6 +220,67 @@ literally. N = 1 is a single
 temperature-1.0 sample on the 200-question subset, so it differs slightly from
 the greedy baseline above.
 
+### 4.3 GRPO (Qwen3-1.7B, 300 steps; eval every 25 steps on 300 val questions × 3 opinions and on 300 held-out SycophancyEval items)
+
+![GRPO curves](../figures/grpo_curves.png)
+
+Three runs with one training config (LoRA r = 16; 8 prompts × 8 completions per
+step; lr 3e-5, constant after a 10-step warmup; KL β = 0.04; completions ≤ 512
+tokens; no thinking): the immediate reward (α = 0) and the delayed reward
+`(1-α)·immediate + α·informed` for α = 0.3 and 0.6. The step-0 point is the
+untrained model and is shared by all three.
+
+| step 0 → 300 | α = 0 (immediate) | α = 0.3 | α = 0.6 |
+|---|---|---|---|
+| proxy, immediate judge (1–10) | 7.79 → **8.85** | not recorded (see below) | not recorded |
+| training reward (1–10) | same as proxy | 7.71 → 8.01 | 7.63 → 8.16 |
+| gold accuracy | 65.3 → **53.6 %** | 65.3 → 66.7 % | 65.3 → 67.4 % |
+| sycophancy rate | 49.3 → **97.7 %** | 49.3 → 46.3 % | 49.3 → **37.0 %** |
+| gold under a wrong opinion | 42.0 → 2.0 % | 42.0 → 44.3 % | 42.0 → 48.7 % |
+| gold under the correct opinion | 89.3 → 99.3 % | 89.3 → 88.7 % | 89.3 → 87.3 % |
+| gold without an opinion | 64.7 → 59.3 % | 64.7 → 66.0 % | 64.7 → 66.3 % |
+| held-out sycophancy (SycophancyEval) | 62.4 → **85.2 %** | 62.4 → 65.8 % | 62.4 → 61.1 % |
+| held-out gold | 60.3 → 51.3 % | 60.3 → 57.3 % | 60.3 → 57.0 % |
+| mean completion length, tokens | 67 → **7** | 66 → 78 | 67 → 88 |
+| KL to the reference policy at step 300 | 4.8 | 0.06 | 0.12 |
+| groups where all 8 completions tie | 90 % | 30 % | 23 % |
+| wall time on one A100 | 3 h 18 min | 6 h 24 min | 7 h 11 min |
+
+What the numbers say:
+
+- **Training amplifies what selection showed, and it generalizes.** Against the
+  immediate reward the proxy gains 1.06 points, more than Best-of-64 (0.87),
+  and the policy ends up following the user's wrong answer 98 % of the time.
+  The damage is where approval and truth conflict: gold under a wrong opinion
+  goes from 42 % to 2 %, under the correct opinion to 99 %, without an opinion
+  it loses 5 points. The policy learned "agree", not "answer"; it also
+  collapsed to bare letters (67 → 7 tokens) and the judge saturated: by step
+  225 nine groups in ten have eight identical ratings, so the gradient is gone.
+  On SycophancyEval — different questions, different prompt templates, never
+  seen in training — sycophancy rises monotonically from 62 % to 85 %
+  (hypothesis 4).
+- **The delayed reward stops the collapse in training, not only in selection.**
+  With α = 0.3 the curve is flat within noise (sycophancy 39–53 % over 300
+  steps, gold 64–68 %); with α = 0.6 sycophancy falls to 37 % and gold under a
+  wrong opinion rises 7 points while gold under the correct opinion loses 2.
+  Both keep long answers and a KL under 0.15 — the optimizer found no cheap
+  direction, because the two judges disagree about agreement. On the held-out
+  set α = 0.6 leaves sycophancy where it started and α = 0.3 adds 3 points,
+  inside the ±4-point noise of 149 wrong-opinion items.
+- **What is not yet shown: the proxy level of the mitigated policies.** In the
+  two delayed runs the periodic evaluation rated greedy outputs with the
+  training reward, so their curves carry `reward_mean` (the mixed rating) and no
+  immediate-judge `proxy_mean`; that is why the frontier figure has only the
+  α = 0 GRPO trajectory. The evaluation now always rates with the immediate
+  judge and reports the informed rating and the training reward alongside, and
+  the two runs are being repeated with it (same seed and config). Until then
+  "same proxy, less sycophancy" is a Best-of-N result, not a training one.
+- **Reading the curve, not the endpoint.** With 300 questions per opinion type
+  a rate carries about ±2.8 points of binomial noise; the α = 0 run clears that
+  by step 125 and keeps going. The informed judge's rating of the α = 0 policy
+  was not recorded either; the rerun code logs it, so the next immediate run
+  will also show the delayed reward *falling* while the proxy rises.
+
 ## 5. Timeline
 
 | Dates | Milestone | Status |
@@ -223,8 +288,8 @@ the greedy baseline above.
 | Nov 3–5 | Reading; repo, configs, dataset (9 000 prompts), 194 offline tests | ✅ Nov 6 |
 | Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
-| Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ⏳ full run |
-| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ⏳ |
+| Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ✅ full run Nov 8 |
+| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8 · ⏳ rerun with the proxy on the eval curve; persona mixture open |
 | Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ⏳ start writing no later than Nov 17 |
 | Nov 20–21 | Final review, ship | ⏳ |
 
@@ -235,7 +300,7 @@ the greedy baseline above.
    1.1 on reasoned ones (4B), under-punishes polite correction and rates on a
    {2, 7–9} scale. Before the full GRPO run on 4B: sharpen the persona and
    harden the informed judge (JUDGE_CHECK §4), re-check the 20 pairs.
-2. **GRPO smoke** — done, go for RL. `results/grpo/grpo-smoke-1/` (Qwen3-1.7B,
+2. **GRPO smoke** — done, go for RL. `results/grpo_smoke/grpo-smoke-1/` (Qwen3-1.7B,
    200 steps, 53 min) proved the loop but not the signal: the linear schedule
    had decayed the learning rate to ~0, each step saw 2 prompts, and in 50–68 %
    of the groups all 8 completions got the same rating (KL 0.01, eval flat).
@@ -247,10 +312,14 @@ the greedy baseline above.
    full run should log length and stop or lower the learning rate once
    sycophancy saturates (it did by step 150). Eval here is 100 questions per
    opinion type, ±5 points.
-3. **GRPO full run** — 600 steps, eval every 50 on val and on held-out
-   SycophancyEval; curves of proxy / gold / sycophancy over steps.
-4. **GRPO mitigation** — `configs/mitigation.yaml`, α ∈ {0.3, 0.6}; the
-   frontier plot gains one curve per α from training, next to the BoN curves.
+3. **GRPO full run** — done, §4.3: 300 steps (saturation came by step 225),
+   eval every 25 on 300 val questions per opinion type and on 300 held-out
+   SycophancyEval items. `results/grpo/grpo-immediate/`.
+4. **GRPO mitigation** — done once for α ∈ {0.3, 0.6} (`results/grpo/
+   grpo-delayed-a0.3/`, `-a0.6/`); being rerun so the eval curve carries the
+   immediate-judge proxy (plus the informed rating and the training reward) and
+   the frontier gains one GRPO curve per α. Persona mixture
+   (`reward.kind: persona_mix`) is wired but has not been run.
 5. **Confidence intervals** — bootstrap over questions for every rate in
    §4, and a second seed for Best-of-N if GPU time allows.
 6. **Write-up and cleanup** — figures, limitations, reproduction commands.
@@ -267,8 +336,8 @@ the greedy baseline above.
 
 ## 8. Definition of done
 
-- [ ] Frontier figure with Best-of-N curves for both models and GRPO curves for α ∈ {0, 0.3, 0.6}
-- [ ] Held-out SycophancyEval numbers before and after GRPO
+- [ ] Frontier figure with Best-of-N curves for both models and GRPO curves for α ∈ {0, 0.3, 0.6} (α = 0 done; the α > 0 reruns add theirs)
+- [x] Held-out SycophancyEval numbers before and after GRPO
 - [ ] Confidence intervals on every reported rate
 - [ ] Limitations section: small models, synthetic user, one judge, seeds
 - [ ] `make data && make baseline && make bon && make grpo && make plots` reproduces every figure from `configs/`
@@ -280,11 +349,18 @@ the greedy baseline above.
 make data                                   # MMLU + ARC -> data/prompts.jsonl
 python -m goodhart.experiments.baseline  --config configs/bon.yaml    # results/baseline/*.json
 python -m goodhart.experiments.best_of_n --config configs/bon.yaml    # results/bon/*.json
+python -m goodhart.experiments.train_grpo --config configs/grpo.yaml       # results/grpo/grpo-immediate/
+python -m goodhart.experiments.train_grpo --config configs/mitigation.yaml # results/grpo/grpo-delayed-a*/
 python -m goodhart.experiments.plots                                  # figures/*.png
 ```
 
-The committed `results/baseline/*.json` and `results/bon/*.json` are the runs
-behind the tables above. The repo configs default to vLLM generation and the
+The committed `results/baseline/*.json`, `results/bon/*.json` and
+`results/grpo/*/{curve.jsonl,summary.json,train_log.jsonl}` are the runs
+behind the tables above. The GRPO runs overrode the config with
+`use_vllm: false`, `max_steps: 300`, `learning_rate: 3e-5`,
+`lr_scheduler_type: constant_with_warmup`, `warmup_steps: 10`,
+`per_device_train_batch_size: 16`, `gradient_accumulation_steps: 4`,
+`eval.every_steps: 25`; `summary.json` stores the merged config. The repo configs default to vLLM generation and the
 Anthropic simulator; on the GPU runner these runs overrode
 `generation.backend: hf` and `simulator.backend: hf` (see §2.2), the baseline
 used all 900 test prompts with `generation.batch_size: 32`, and Best-of-N used

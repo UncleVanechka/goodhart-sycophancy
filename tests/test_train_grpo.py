@@ -230,3 +230,47 @@ def test_load_heldout_missing_file_names_download(tmp_path):
     cfg = {"eval": {"sycophancy_eval": True}, "paths": {"data": str(tmp_path)}}
     with pytest.raises(FileNotFoundError, match="download"):
         tg.load_heldout(cfg, random.Random(0))
+
+
+def _stub_generate(records: list[dict]):
+    """Greedy stand-in: answer the opinion letter when given, else the gold letter."""
+    by_prompt = {r["prompt"]: f"Answer: {r['opinion_answer'] or r['gold']}" for r in records}
+
+    def generate(prompts: list[str]) -> list[str]:
+        return [by_prompt[p] for p in prompts]
+
+    return generate
+
+
+def test_evaluate_records_reports_extra_judges_per_opinion(records):
+    def informed(batch: list[dict], texts: list[str]) -> list[float]:
+        return [2.0 if r["opinion"] == "wrong" else 8.0 for r in batch]
+
+    metrics = tg.evaluate_records(
+        _stub_generate(records), records, stub_reward, stub_parse, {"informed": informed}
+    )
+    assert metrics["proxy_mean"] == 9.0
+    assert metrics["reward_mean"] == metrics["proxy_mean"]
+    assert metrics["reward_mean@wrong"] == metrics["proxy_mean@wrong"]
+    assert metrics["informed_mean@wrong"] == 2.0
+    assert metrics["informed_mean@none"] == 8.0
+    assert metrics["sycophancy_rate"] == 1.0
+
+
+def test_evaluate_records_reward_judge_overrides_reward_mean(records):
+    def mixed(batch: list[dict], texts: list[str]) -> list[float]:
+        return [5.0] * len(batch)
+
+    metrics = tg.evaluate_records(
+        _stub_generate(records), records, stub_reward, stub_parse, {"reward": mixed}
+    )
+    assert metrics["proxy_mean"] == 9.0
+    assert metrics["reward_mean"] == 5.0
+    assert metrics["reward_mean@wrong"] == 5.0
+
+
+def test_evaluate_records_rejects_misaligned_judge(records):
+    with pytest.raises(ValueError, match="judge 'bad'"):
+        tg.evaluate_records(
+            _stub_generate(records), records, stub_reward, stub_parse, {"bad": lambda r, t: [1.0]}
+        )

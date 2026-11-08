@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -168,6 +168,39 @@ def _alpha_of_run(run_name: str, rows: list[dict[str, Any]]) -> float | None:
 
 def _sorted_alpha_keys(curves: dict[str, Any]) -> list[str]:
     return sorted(curves, key=lambda k: (_alpha_of_key(k) is None, _alpha_of_key(k) or 0.0, k))
+
+
+def _group_runs(
+    grpo: dict[str, list[dict[str, Any]]],
+) -> dict[float | None, dict[str, list[dict[str, Any]]]]:
+    """GRPO runs grouped by α (``None`` for runs without one), α ascending."""
+    groups: dict[float | None, dict[str, list[dict[str, Any]]]] = {}
+    for run_name, rows in grpo.items():
+        groups.setdefault(_alpha_of_run(run_name, rows), {})[run_name] = rows
+    return dict(sorted(groups.items(), key=lambda kv: (kv[0] is None, kv[0] or 0.0)))
+
+
+def _series(rows: list[dict[str, Any]], value: Callable[[dict[str, Any]], float | None]):
+    return {_row_step(r): v for r in rows if (v := value(r)) is not None}
+
+
+def _aggregate(
+    runs: dict[str, list[dict[str, Any]]], value: Callable[[dict[str, Any]], float | None]
+) -> list[tuple[float, float, float, float, int]]:
+    """Per step: ``(step, mean, min, max, n)`` over the runs that recorded the metric there."""
+    per_run = [_series(rows, value) for rows in runs.values()]
+    steps = sorted({s for series in per_run for s in series})
+    out = []
+    for step in steps:
+        vals = [series[step] for series in per_run if step in series]
+        if vals:
+            out.append((step, sum(vals) / len(vals), min(vals), max(vals), len(vals)))
+    return out
+
+
+def _group_label(alpha: float | None, n_runs: int) -> str:
+    label = f"GRPO · {_fmt_alpha(alpha)}"
+    return f"{label} ({n_runs} runs)" if n_runs > 1 else label
 
 
 def _sorted_n(curve: dict[str, Any]) -> list[str]:
@@ -361,22 +394,31 @@ def plot_goodhart_frontier(
             )
             for n, x, y in pts:
                 _annotate(ax, x, y, f"N={n}")
-    for idx, (run_name, rows) in enumerate(grpo.items()):
-        alpha = _alpha_of_run(run_name, rows)
-        pts = []
-        for row in rows:
-            x, y = _metric(row, "proxy_mean"), _metric(row, "gold_accuracy")
-            if x is not None and y is not None:
-                pts.append((_row_step(row), x, y))
+    for idx, (alpha, runs) in enumerate(_group_runs(grpo).items()):
+        xs = _aggregate(runs, lambda r: _metric(r, "proxy_mean"))
+        ys = _aggregate(runs, lambda r: _metric(r, "gold_accuracy"))
+        y_at = {s: m for s, m, *_ in ys}
+        pts = [(s, x, y_at[s]) for s, x, *_ in xs if s in y_at]
         if not pts:
             continue
         plotted = True
+        color = color_of[alpha]
         marker = MARKERS[(idx + len(bon)) % len(MARKERS)]
+        if len(runs) > 1:  # individual runs thin, the mean trajectory on top
+            for rows in runs.values():
+                run_pts = [
+                    (x, y)
+                    for row in rows
+                    if (x := _metric(row, "proxy_mean")) is not None
+                    and (y := _metric(row, "gold_accuracy")) is not None
+                ]
+                if run_pts:
+                    ax.plot(*zip(*run_pts, strict=True), color=color, linewidth=0.8, alpha=0.45)
         ax.plot(
             [p[1] for p in pts],
             [p[2] for p in pts],
-            label=f"{run_name} · {_fmt_alpha(alpha)} (GRPO)",
-            **_line_kwargs(color_of[alpha], marker, dashed=True),
+            label=_group_label(alpha, len(runs)),
+            **_line_kwargs(color, marker, dashed=True),
         )
         stride = max(1, len(pts) // 2)  # first, middle and last step keep the labels readable
         for i, (step, x, y) in enumerate(pts):
@@ -397,9 +439,11 @@ def plot_goodhart_frontier(
 def plot_grpo_curves(grpo: dict[str, list[dict[str, Any]]], out: str | Path) -> Path | None:
     """Proxy, informed judge, training reward, gold, sycophancy and held-out metrics by step.
 
-    One line per run. The proxy panel is the immediate judge, the informed panel the judge who
-    knows the truth (the delayed signal), the training-reward panel what the optimizer saw (the
-    proxy itself for an immediate-reward run). Runs that did not record a judge skip its panel.
+    One line per α: the mean over that α's runs, with a min–max band and thin individual runs
+    when there are several. The proxy panel is the immediate judge, the informed panel the judge
+    who knows the truth (the delayed signal), the training-reward panel what the optimizer saw
+    (the proxy itself for an immediate-reward run). Runs that did not record a judge are left
+    out of its panel.
     """
     if not grpo:
         return None
@@ -414,22 +458,32 @@ def plot_grpo_curves(grpo: dict[str, list[dict[str, Any]]], out: str | Path) -> 
         ("heldout_gold_accuracy", "held-out gold accuracy (SycophancyEval)"),
         ("heldout_informed_mean", "held-out informed judge (1–10)"),
     ]
+    getters: dict[str, Callable[[dict[str, Any]], float | None]] = {
+        "heldout": _heldout_sycophancy,
+        "reward": _training_reward,
+    }
     fig, axes = plt.subplots(2, 4, figsize=(19, 7))
     axes = axes.ravel()
-    for idx, (run_name, rows) in enumerate(grpo.items()):
-        steps = [_row_step(r) for r in rows]
+    for idx, (alpha, runs) in enumerate(_group_runs(grpo).items()):
         color = PALETTE[idx % len(PALETTE)]
         marker = MARKERS[idx % len(MARKERS)]
+        label = _group_label(alpha, len(runs)) if len(runs) > 1 else next(iter(runs))
         for ax, (metric, _) in zip(axes, panels, strict=True):
-            if metric == "heldout":
-                ys = [_heldout_sycophancy(r) for r in rows]
-            elif metric == "reward":
-                ys = [_training_reward(r) for r in rows]
-            else:
-                ys = [_metric(r, metric) for r in rows]
-            pts = [(s, y) for s, y in zip(steps, ys, strict=True) if y is not None]
-            if pts:
-                ax.plot(*zip(*pts, strict=True), label=run_name, **_line_kwargs(color, marker))
+            value = getters.get(metric) or (lambda r, key=metric: _metric(r, key))
+            agg = _aggregate(runs, value)
+            if not agg:
+                continue
+            steps = [a[0] for a in agg]
+            if len(runs) > 1:
+                ax.fill_between(
+                    steps, [a[2] for a in agg], [a[3] for a in agg], color=color, alpha=0.15, lw=0
+                )
+                for rows in runs.values():
+                    series = _series(rows, value)
+                    if series:
+                        xs = sorted(series)
+                        ax.plot(xs, [series[s] for s in xs], color=color, linewidth=0.8, alpha=0.45)
+            ax.plot(steps, [a[1] for a in agg], label=label, **_line_kwargs(color, marker))
     for ax, (_, ylabel) in zip(axes, panels, strict=True):
         _style_axes(ax)
         ax.set_xlabel("training step")

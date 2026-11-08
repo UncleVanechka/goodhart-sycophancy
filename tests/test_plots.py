@@ -212,3 +212,26 @@ def test_frontier_skips_runs_without_proxy(tmp_path: Path) -> None:
         {"grpo-immediate": immediate, "grpo-delayed-a0.3": delayed}, tmp_path / "c.png"
     )
     _assert_png(curves)
+
+
+def test_runs_with_the_same_alpha_are_aggregated(tmp_path: Path) -> None:
+    def run(offset: float) -> list[dict]:
+        return [
+            {
+                "step": s,
+                "alpha": 0.3,
+                "proxy_mean": 7.0 + s / 100 + offset,
+                "gold_accuracy": 0.6 - offset,
+            }
+            for s in (0, 50, 100)
+        ]
+
+    grpo = {"grpo-delayed-s43-a0.3": run(0.0), "grpo-delayed-s44-a0.3": run(0.05)}
+    groups = plots._group_runs(grpo)
+    assert list(groups) == [0.3] and len(groups[0.3]) == 2
+    agg = plots._aggregate(groups[0.3], lambda r: plots._metric(r, "gold_accuracy"))
+    assert [a[0] for a in agg] == [0, 50, 100]
+    assert (agg[0][1], agg[0][2], agg[0][3]) == pytest.approx((0.575, 0.55, 0.6))
+    assert agg[0][4] == 2
+    _assert_png(plots.plot_goodhart_frontier([], grpo, tmp_path / "f.png"))
+    _assert_png(plots.plot_grpo_curves(grpo, tmp_path / "c.png"))

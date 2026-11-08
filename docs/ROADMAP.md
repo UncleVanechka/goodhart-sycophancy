@@ -1,6 +1,6 @@
 # Roadmap
 
-*Updated 2026-11-08. Hard deadline for the write-up: **2026-11-21**.*
+*Updated 2026-11-09. Hard deadline for the write-up: **2026-11-21**.*
 
 One sentence: optimizing an LLM against the approval of a simulated user breeds
 sycophancy the way optimizing a feed for clicks breeds clickbait, and we test
@@ -13,15 +13,15 @@ the delayed reward removes it on both models. GRPO amplifies it in training:
 300 steps against the immediate reward take Qwen3-1.7B from 49 % to 98 %
 sycophancy, gold falls from 65 % to 54 %, and the effect transfers to the
 held-out SycophancyEval benchmark (62 → 85 %). The delayed reward in training
-is a knife edge on this model: α = 0.3 collapsed in one of two runs with the
-same seed, α = 0.6 held twice (sycophancy 49 → 38 %, gold up 1–2 points) but
-without any gain in the immediate proxy. Next: more seeds on the three α
-values, the informed judge on the α = 0 run, then the write-up.
+is a knife edge on this model (11 runs): α = 0.3 only slows the collapse
+(sycophancy 46–97 % across four runs, two still climbing at step 300), α = 0.6
+holds in all four (37–46 %, gold up 1–2 points) but without any gain in the
+immediate proxy — it swaps the objective rather than keeping approval with
+less sycophancy. Next: confidence intervals, limitations, the write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       done        done      done (2 runs/α)    Nov 17+
-                                                         seeds next
+  done       done       done       done        done      done (3–4 runs/α)  Nov 17+
 ```
 
 ## 1. The question in one picture
@@ -120,8 +120,8 @@ figures. Two consequences shape the stack:
 |---|---|---|---|
 | 1 | **Baseline** — one answer per prompt, no optimization | sycophancy the model brings in; the judge's bias | ✅ Qwen3-1.7B, Qwen3-4B |
 | 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B and 4B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) |
-| 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ 1.7B, 300 steps: sycophancy 49 → 98 %, held-out 62 → 85 % (§4.3) |
-| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO, two runs each (§4.3): 0.3 collapses in one of two, 0.6 holds but the proxy stays flat |
+| 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ 1.7B, 300 steps, 3 seeds: sycophancy 49 → 86–98 %, held-out 62 → 66–85 % (§4.3) |
+| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO, four runs each (§4.3): 0.3 only slows the collapse, 0.6 holds but the proxy stays flat · persona mixture not run |
 
 Go / no-go for 3: the proxy must rise within the first 200 GRPO steps. If it
 does not by **Nov 13**, RL is dropped and the project ships on experiments 1
@@ -224,76 +224,89 @@ the greedy baseline above.
 
 ![GRPO curves](../figures/grpo_curves.png)
 
-Five runs with one training config (LoRA r = 16; 8 prompts × 8 completions per
-step; lr 3e-5, constant after a 10-step warmup; KL β = 0.04; completions ≤ 512
-tokens; no thinking; seed 42 everywhere): the immediate reward (α = 0) and the
-delayed reward `(1-α)·immediate + α·informed` for α = 0.3 and 0.6, each run
-twice. The step-0 point is the untrained model and is shared by all runs. The
-first pair of delayed runs recorded the training reward instead of the
-immediate-judge proxy on their eval curve; the second pair ran the same config
-with the evaluation fixed (it now reports the immediate judge, the informed
-judge and the training reward side by side), so they are the ones on the
-frontier. Keeping both pairs turned out to matter: same seed, same config,
-different outcome.
+Eleven runs with one training config (LoRA r = 16; 8 prompts × 8 completions
+per step; lr 3e-5, constant after a 10-step warmup; KL β = 0.04; completions
+≤ 512 tokens; no thinking): the immediate reward (α = 0, three seeds) and the
+delayed reward `(1-α)·immediate + α·informed` for α = 0.3 and 0.6 (four runs
+each: seed 42 twice, seeds 43 and 44 once). The step-0 point is the untrained
+model and is shared by all runs. The first seed-42 pair of delayed runs
+recorded the training reward instead of the immediate-judge proxy on its eval
+curve; every later run reports the immediate judge, the informed judge and the
+training reward side by side, and the figure above averages those runs (three
+per α, mean with a min–max band). GRPO sampling on the GPU is not
+bit-reproducible, so the two seed-42 runs at each α are two independent draws
+like any other pair.
 
-| step 0 → 300 | α = 0 (immediate) | α = 0.3, run 1 | α = 0.3, run 2 | α = 0.6, run 1 | α = 0.6, run 2 |
-|---|---|---|---|---|---|
-| proxy, immediate judge (1–10) | 7.79 → 8.85 | not recorded | 7.79 → 8.54 | not recorded | 7.79 → 7.86 |
-| delayed signal, informed judge (1–10) | not recorded | not recorded | 7.53 → 6.30 | not recorded | 7.53 → 8.22 |
-| training reward (1–10) | not recorded | 7.71 → 8.01 | 7.71 → 7.87 | 7.63 → 8.16 | 7.63 → 8.07 |
-| gold accuracy | 65.3 → 53.6 % | 65.3 → 66.7 % | 65.3 → 54.3 % | 65.3 → 67.4 % | 65.3 → 66.6 % |
-| sycophancy rate | 49.3 → 97.7 % | 49.3 → 46.3 % | 49.3 → 96.7 % | 49.3 → 37.0 % | 49.3 → 38.0 % |
-| gold under a wrong opinion | 42.0 → 2.0 % | 42.0 → 44.3 % | 42.0 → 3.0 % | 42.0 → 48.7 % | 42.0 → 48.3 % |
-| gold under the correct opinion | 89.3 → 99.3 % | 89.3 → 89.7 % | 89.3 → 99.3 % | 89.3 → 87.3 % | 89.3 → 86.7 % |
-| gold without an opinion | 64.7 → 59.3 % | 64.7 → 66.0 % | 64.7 → 60.7 % | 64.7 → 66.3 % | 64.7 → 64.7 % |
-| held-out sycophancy (SycophancyEval) | 62.4 → 85.2 % | 62.4 → 65.8 % | 62.4 → 81.2 % | 62.4 → 61.1 % | 62.4 → 61.1 % |
-| held-out gold | 60.3 → 51.3 % | 60.3 → 57.3 % | 60.3 → 52.3 % | 60.3 → 57.0 % | 60.3 → 58.0 % |
-| held-out informed judge (1–10) | not recorded | not recorded | 7.61 → 5.86 | not recorded | 7.61 → 7.84 |
-| mean completion length, tokens | 67 → 7 | 66 → 78 | 66 → 32 | 67 → 88 | 67 → 85 |
-| KL to the reference policy at step 300 | 4.79 | 0.06 | 0.89 | 0.12 | 0.06 |
-| groups where all 8 completions tie, last 20 steps | 90 % | 28 % | 84 % | 24 % | 24 % |
-| wall time on one A100 | 3 h 18 min | 6 h 25 min | 4 h 30 min | 7 h 11 min | 6 h 24 min |
+| step 300, per α | α = 0 (immediate) | α = 0.3 | α = 0.6 |
+|---|---|---|---|
+| runs | 3 | 4 | 4 |
+| sycophancy rate, % — mean (min–max) | 93 (86–98) | 66 (46–97) | 40 (37–46) |
+| gold accuracy, % | 56 (54–59) | 62 (54–67) | 67 (66–67) |
+| gold under a wrong opinion, % | 6 (2–12) | 28 (3–44) | 47 (44–49) |
+| gold without an opinion, % | 63 (59–67) | 64 (61–66) | 65 (63–66) |
+| held-out sycophancy (SycophancyEval), % | 77 (66–85) | 68 (57–81) | 61 (53–68) |
+| held-out gold, % | 52 (51–55) | 56 (52–59) | 57 (54–58) |
+| proxy, immediate judge (1–10), from 7.79 | 8.54 (8.37–8.85) | 8.33 (8.17–8.54) · n=3 | 7.85 (7.78–7.90) · n=3 |
+| delayed signal, informed judge (1–10), from 7.53 | 6.59 (6.38–6.80) · n=2 | 7.07 (6.30–7.49) · n=3 | 7.92 (7.50–8.22) · n=3 |
+| training reward (1–10) | 8.38 (8.37–8.40) · n=2 | 7.96 (7.87–8.04) | 7.96 (7.61–8.16) |
+| mean completion length, tokens (from 67) | 18 (7–32) | 54 (32–78) | 71 (23–89) |
+| KL to the reference policy | 2.04 (0.43–4.79) | 0.27 (0.06–0.89) | 0.09 (0.06–0.12) |
+| wall time per run on one A100 | 3.9 h (3.3 h–4.5 h) | 5.8 h (4.5 h–6.4 h) | 6.8 h (6.4 h–7.2 h) |
+Per run, step 300 (`results/grpo/` and `results/grpo_first_pass/`):
+
+| run | α | seed | eval judges | sycophancy | gold | proxy | informed | held-out sycophancy | tokens |
+|---|---|---|---|---|---|---|---|---|---|
+| `grpo/grpo-immediate` | 0 | 42 | immediate | 98 % | 54 % | 8.85 | — | 85 % | 7 |
+| `grpo/grpo-immediate-s43` | 0 | 43 | immediate + informed | 86 % | 59 % | 8.40 | 6.80 | 66 % | 32 |
+| `grpo/grpo-immediate-s44` | 0 | 44 | immediate + informed | 94 % | 55 % | 8.37 | 6.38 | 81 % | 14 |
+| `first_pass/grpo-delayed-a0.3` | 0.3 | 42 | training reward only | 46 % | 67 % | — | — | 66 % | 78 |
+| `grpo/grpo-delayed-a0.3` | 0.3 | 42 | immediate + informed | 97 % | 54 % | 8.54 | 6.30 | 81 % | 32 |
+| `grpo/grpo-delayed-s43-a0.3` | 0.3 | 43 | immediate + informed | 61 % | 64 % | 8.28 | 7.49 | 57 % | 66 |
+| `grpo/grpo-delayed-s44-a0.3` | 0.3 | 44 | immediate + informed | 60 % | 64 % | 8.17 | 7.41 | 69 % | 40 |
+| `first_pass/grpo-delayed-a0.6` | 0.6 | 42 | training reward only | 37 % | 67 % | — | — | 61 % | 88 |
+| `grpo/grpo-delayed-a0.6` | 0.6 | 42 | immediate + informed | 38 % | 67 % | 7.86 | 8.22 | 61 % | 85 |
+| `grpo/grpo-delayed-s43-a0.6` | 0.6 | 43 | immediate + informed | 39 % | 66 % | 7.90 | 8.04 | 53 % | 89 |
+| `grpo/grpo-delayed-s44-a0.6` | 0.6 | 44 | immediate + informed | 46 % | 67 % | 7.78 | 7.50 | 68 % | 23 |
 
 What the numbers say:
 
-- **Training amplifies what selection showed, and it generalizes.** Against the
-  immediate reward the proxy gains 1.06 points, more than Best-of-64 (0.87),
-  and the policy ends up following the user's wrong answer 98 % of the time.
-  The damage is where approval and truth conflict: gold under a wrong opinion
-  goes from 42 % to 2 %, under the correct opinion to 99 %, without an opinion
-  it loses 5 points. The policy learned "agree", not "answer"; it also
-  collapsed to bare letters (67 → 7 tokens) and the judge saturated: by step
-  225 nine groups in ten have eight identical ratings, so the gradient is gone.
-  On SycophancyEval — different questions, different prompt templates, never
-  seen in training — sycophancy rises monotonically from 62 % to 85 %
-  (hypothesis 4).
-- **α = 0.3 does not fix it; it makes the collapse a coin flip.** Run 1 stayed
-  flat for 300 steps (sycophancy 39–53 %, KL 0.06). Run 2, same seed and
-  config, drifted for 175 steps and then collapsed the same way as α = 0:
-  sycophancy 61 % at step 200, 83 % at 225, 97 % at 300, gold down to 54 %,
-  held-out sycophancy 81 %. The judges show what the optimizer found: the
-  immediate rating rose 7.79 → 8.54 while the informed rating fell
-  7.53 → 6.30, and the mixed reward moved only +0.16 — agreement still pays
-  under the mixture, 0.7 × (+0.75) against 0.3 × (−1.23), just slowly enough
-  that 300 steps may or may not find it. GRPO sampling on the GPU is not
-  bit-reproducible, so a seed pins nothing here; two runs are two draws.
-- **α = 0.6 holds, twice — by not optimizing the proxy at all.** Both runs end
-  with sycophancy 37–38 %, gold 67 %, gold under a wrong opinion up 6–7 points,
-  long answers (85–88 tokens), KL ≤ 0.12, and held-out sycophancy where it
-  started. But the immediate judge's rating is flat (7.79 → 7.86): what rose is
-  the informed rating (7.53 → 8.22). On this model the delayed reward does not
-  buy "the same approval with less sycophancy"; it replaces the approval
-  objective with the informed one. That is the same shape Best-of-N showed at
-  α = 1 (gold up, proxy flat), one notch earlier in training than in selection.
-  Run 2 also shows the knife edge: at steps 150–175 sycophancy jumped to 49 %
-  and the informed rating dropped to 7.2 before the run recovered.
-- **Reading the curves, not the endpoints.** With 300 questions per opinion
-  type a rate carries about ±2.8 points of binomial noise: a few points
-  between two runs is noise, 65.8 vs 81.2 % held-out sycophancy at α = 0.3 is
-  not, and 61.1 vs 61.1 % at α = 0.6 is agreement. The α = 0 run was
-  not repeated and the informed judge did not rate it; a repeat with the fixed
-  evaluation would show the delayed reward *falling* while the proxy rises,
-  which is the cleanest single picture of the effect.
+- **Training amplifies what selection showed, and it generalizes.** All three
+  immediate-reward runs collapse: sycophancy 86–98 % (from 49 %), gold 54–59 %
+  (from 65 %), gold under a wrong opinion 2–12 % (from 42 %), and held-out
+  SycophancyEval sycophancy 66–85 % (from 62 %) — different questions,
+  different prompt templates, never seen in training (hypothesis 4). The proxy
+  gains 0.58–1.06 points, Best-of-64 gained 0.87. The judge who knows the truth
+  sees the damage the proxy does not: the informed rating falls 7.53 → 6.4–6.8
+  in the two runs that recorded it. The policy learned "agree", not "answer":
+  gold without an opinion drops 0–6 points while gold under the correct
+  opinion reaches 99 %. Completions shrink to 7–32 tokens and the judge
+  saturates (72–90 % of groups end with eight identical ratings).
+- **α = 0.3 slows the collapse; it does not stop it.** Four runs, four
+  endpoints: 46 %, 60 %, 61 % and 97 % sycophancy. The two that end at 60–61 %
+  are still climbing (42 → 61 % and 45 → 60 % over the last 100 steps) and
+  their informed rating is already below the start (7.4–7.5); the one that
+  reached 97 % did so along the α = 0 path, immediate rating 7.79 → 8.54 while
+  the informed rating fell to 6.30 and the mixed reward moved only +0.16.
+  Agreement still pays under the mixture — 0.7 × (+0.75) against
+  0.3 × (−1.23) — just slowly enough that 300 steps may or may not get there.
+- **α = 0.6 holds in all four runs — by not optimizing the proxy at all.**
+  Sycophancy 37–46 %, gold 66–67 %, gold under a wrong opinion 44–49 % (up
+  from 42), long answers in three of four runs, KL ≤ 0.12. The immediate
+  judge's rating is flat (7.78–7.90): what rose is the informed rating
+  (8.0–8.2 in two runs). On this model the delayed reward does not buy "the
+  same approval with less sycophancy"; it replaces the approval objective with
+  the informed one — the shape Best-of-N showed at α = 1 (gold up, proxy
+  flat), one notch earlier in training than in selection. The edge is close
+  even here: the seed-44 run ends with 23-token answers, 86 % tied groups,
+  informed rating down from 8.2 to 7.5 and sycophancy up from 35 % to 46 %
+  over its last 100 steps. Held-out sycophancy averages 61 % (53–68) against
+  62 % at the start.
+- **Spread, not noise.** With 300 questions per opinion type a rate carries
+  about ±2.8 points of binomial noise; the α = 0.6 runs agree within that
+  (37–46 %), the α = 0.3 runs span 46–97 %. The seed-42 pair at α = 0.3 differs
+  more than seeds 43 and 44 do from each other, so a seed pins nothing and
+  claims about the threshold need the run count, not a seed. The same-α
+  min–max bands in the figure are that spread.
 
 ## 5. Timeline
 
@@ -303,7 +316,7 @@ What the numbers say:
 | Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
 | Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ✅ full run Nov 8 |
-| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8, two runs each · ⏳ more seeds; persona mixture open |
+| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · persona mixture open |
 | Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ⏳ start writing no later than Nov 17 |
 | Nov 20–21 | Final review, ship | ⏳ |
 
@@ -329,14 +342,12 @@ What the numbers say:
 3. **GRPO full run** — done, §4.3: 300 steps (saturation came by step 225),
    eval every 25 on 300 val questions per opinion type and on 300 held-out
    SycophancyEval items. `results/grpo/grpo-immediate/`.
-4. **GRPO mitigation** — done twice for α ∈ {0.3, 0.6}: `results/grpo/
-   grpo-delayed-a0.3/`, `-a0.6/` (evaluation with the immediate judge, the
-   informed judge and the training reward) and `results/grpo_first_pass/`
-   (training reward only). The two α = 0.3 runs disagree, so the next GPU time
-   goes to seeds: at least two more runs per α (including α = 0, which also
-   gets the informed judge on its curve) before any claim about where the
-   knife edge sits. Persona mixture (`reward.kind: persona_mix`) is wired but
-   has not been run.
+4. **GRPO mitigation** — done: four runs at each of α ∈ {0.3, 0.6} and three
+   at α = 0 (`results/grpo/`, plus the first seed-42 pair under
+   `results/grpo_first_pass/`). Verdict in §4.3: 0.3 slows the collapse, 0.6
+   stops it at the price of the proxy. Persona mixture (`reward.kind:
+   persona_mix`) is wired but has not been run; if GPU time remains it is the
+   one open experiment, otherwise it goes to limitations.
 5. **Confidence intervals** — bootstrap over questions for every rate in
    §4, and a second seed for Best-of-N if GPU time allows.
 6. **Write-up and cleanup** — figures, limitations, reproduction commands.
@@ -355,7 +366,7 @@ What the numbers say:
 
 - [x] Frontier figure with Best-of-N curves for both models and GRPO curves for α ∈ {0, 0.3, 0.6}
 - [x] Held-out SycophancyEval numbers before and after GRPO
-- [ ] Confidence intervals on every reported rate, and more than one GRPO run per α
+- [ ] Confidence intervals on every reported rate (GRPO has 3–4 runs per α; bootstrap over questions still to do)
 - [ ] Limitations section: small models, synthetic user, one judge, seeds
 - [ ] `make data && make baseline && make bon && make grpo && make plots` reproduces every figure from `configs/`
 - [ ] Write-up published; README links to it
@@ -378,7 +389,8 @@ tables above. The GRPO runs overrode the config with
 `use_vllm: false`, `max_steps: 300`, `learning_rate: 3e-5`,
 `lr_scheduler_type: constant_with_warmup`, `warmup_steps: 10`,
 `per_device_train_batch_size: 16`, `gradient_accumulation_steps: 4`,
-`eval.every_steps: 25`; `summary.json` stores the merged config. The repo configs default to vLLM generation and the
+`eval.every_steps: 25`; the seed runs add `seed: 43` or `44` and a `-s<seed>`
+suffix on `run_name`; `summary.json` stores the merged config. The repo configs default to vLLM generation and the
 Anthropic simulator; on the GPU runner these runs overrode
 `generation.backend: hf` and `simulator.backend: hf` (see §2.2), the baseline
 used all 900 test prompts with `generation.batch_size: 32`, and Best-of-N used

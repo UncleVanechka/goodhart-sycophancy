@@ -32,6 +32,7 @@ results/*
 !results/grpo_smoke/*/
 !results/grpo_first_pass/
 !results/grpo_first_pass/*/
+!results/ci/
 results/grpo/*/checkpoint-*/
 results/grpo/*/final/
 results/baseline/*_responses.jsonl

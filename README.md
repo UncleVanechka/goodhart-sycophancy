@@ -62,9 +62,10 @@ src/goodhart/
   simulator/      personas, scoring backends (Anthropic / vLLM / local HF judge / mock), reward functions
   policy/         sampling N responses from the policy (vLLM / HF)
   eval/           answer parsing, metrics (gold, sycophancy, proxy)
-  experiments/    baseline, best_of_n, train_grpo, plots — CLI entry points
+  experiments/    baseline, best_of_n, train_grpo, confidence, plots — CLI entry points
 docs/DESIGN.md    data schema and module interfaces
 docs/ROADMAP.md   plan, flow diagrams, results so far, timeline
+docs/WRITEUP.md   the write-up (draft)
 tests/            unit tests, no GPU and no network
 results/          JSON outputs; baseline/, bon/, grpo/ summaries and curves are committed, samples and checkpoints are not
 figures/          plots; the PNGs rendered from the committed results are tracked
@@ -100,13 +101,14 @@ and writes a JSON with its config and outputs to `results/`.
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
 | RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
 | Tracking | Weights & Biases |
-| Compute | 1× A100/H100 80 GB, ~40–60 GPU-hours |
+| Compute | 1× A100 80 GB; 71 GPU-hours for everything reported |
 
 ## Status
 
-Plan, flow diagrams, results so far and the timeline live in
-[docs/ROADMAP.md](docs/ROADMAP.md); the headline figure is
-[figures/goodhart_frontier.png](figures/goodhart_frontier.png).
+The write-up is [docs/WRITEUP.md](docs/WRITEUP.md) (draft). Plan, flow diagrams,
+per-run tables and the timeline live in [docs/ROADMAP.md](docs/ROADMAP.md); confidence
+intervals for every reported rate in [results/ci/summary.md](results/ci/summary.md); the
+headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png).
 
 - [x] Repository skeleton, configs, data schema, interfaces
 - [x] Dataset: 9 000 prompts (3 000 MMLU / ARC questions × 3 opinion types)
@@ -118,7 +120,8 @@ Plan, flow diagrams, results so far and the timeline live in
 - [x] GRPO full run on Qwen3-1.7B with held-out SycophancyEval: sycophancy 49 → 98 %, held-out 62 → 85 %
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
 - [ ] Persona mixture in GRPO
-- [ ] Write-up
+- [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
+- [ ] Write-up — draft in docs/WRITEUP.md, final by Nov 17
 
 ## References
 

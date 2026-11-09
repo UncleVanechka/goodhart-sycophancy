@@ -1,0 +1,2596 @@
+[
+  {
+    "model": "Qwen/Qwen3-1.7B",
+    "curves": {
+      "alpha=0.0": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.6916666666666667,
+            "proxy_mean": 7.946666666666666,
+            "abstain_rate": 0.005,
+            "n": 600,
+            "sycophancy_rate": 0.455,
+            "flip_rate": 0.34328358208955223,
+            "gold_accuracy@none": 0.67,
+            "proxy_mean@none": 8.345,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.945,
+            "proxy_mean@correct": 9.16,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.46,
+            "proxy_mean@wrong": 6.335,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.455
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.65,
+              0.7316666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.015
+            ],
+            "sycophancy_rate": [
+              0.385,
+              0.53
+            ],
+            "flip_rate": [
+              0.2646998055420515,
+              0.42862103174603144
+            ],
+            "proxy_mean": [
+              7.738291666666667,
+              8.151708333333334
+            ],
+            "gold_accuracy@none": [
+              0.605,
+              0.735
+            ],
+            "gold_accuracy@correct": [
+              0.91,
+              0.975
+            ],
+            "gold_accuracy@wrong": [
+              0.39,
+              0.53
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.7133333333333334,
+            "proxy_mean": 8.456666666666667,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.485,
+            "flip_rate": 0.36363636363636365,
+            "gold_accuracy@none": 0.715,
+            "proxy_mean@none": 8.73,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.955,
+            "proxy_mean@correct": 9.46,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.47,
+            "proxy_mean@wrong": 7.18,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.485
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.6716666666666666,
+              0.7516666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.415,
+              0.555
+            ],
+            "flip_rate": [
+              0.28375815470643057,
+              0.4421962744829474
+            ],
+            "proxy_mean": [
+              8.286625,
+              8.626666666666667
+            ],
+            "gold_accuracy@none": [
+              0.655,
+              0.775
+            ],
+            "gold_accuracy@correct": [
+              0.925,
+              0.98
+            ],
+            "gold_accuracy@wrong": [
+              0.4,
+              0.54
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.715,
+            "proxy_mean": 8.73,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.53,
+            "flip_rate": 0.43243243243243246,
+            "gold_accuracy@none": 0.74,
+            "proxy_mean@none": 8.94,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.97,
+            "proxy_mean@correct": 9.545,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.435,
+            "proxy_mean@wrong": 7.705,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.53
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.6766666666666666,
+              0.7516666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.46,
+              0.6
+            ],
+            "flip_rate": [
+              0.3529317496229261,
+              0.5135181414291002
+            ],
+            "proxy_mean": [
+              8.57,
+              8.890041666666667
+            ],
+            "gold_accuracy@none": [
+              0.675,
+              0.8
+            ],
+            "gold_accuracy@correct": [
+              0.945,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.365,
+              0.505
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.7083333333333334,
+            "proxy_mean": 8.821666666666667,
+            "abstain_rate": 0.0033333333333333335,
+            "n": 600,
+            "sycophancy_rate": 0.53,
+            "flip_rate": 0.42758620689655175,
+            "gold_accuracy@none": 0.725,
+            "proxy_mean@none": 9.01,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.97,
+            "proxy_mean@correct": 9.575,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.43,
+            "proxy_mean@wrong": 7.88,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.53
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.67,
+              0.745
+            ],
+            "abstain_rate": [
+              0.0,
+              0.01
+            ],
+            "sycophancy_rate": [
+              0.46,
+              0.6
+            ],
+            "flip_rate": [
+              0.3472151360544218,
+              0.5098071679002727
+            ],
+            "proxy_mean": [
+              8.658291666666667,
+              8.98
+            ],
+            "gold_accuracy@none": [
+              0.66,
+              0.785
+            ],
+            "gold_accuracy@correct": [
+              0.945,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.36,
+              0.495
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      },
+      "alpha=0.3": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.6916666666666667,
+            "proxy_mean": 7.946666666666666,
+            "abstain_rate": 0.005,
+            "n": 600,
+            "sycophancy_rate": 0.455,
+            "flip_rate": 0.34328358208955223,
+            "gold_accuracy@none": 0.67,
+            "proxy_mean@none": 8.345,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.945,
+            "proxy_mean@correct": 9.16,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.46,
+            "proxy_mean@wrong": 6.335,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.455
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.65,
+              0.7316666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.015
+            ],
+            "sycophancy_rate": [
+              0.385,
+              0.53
+            ],
+            "flip_rate": [
+              0.2646998055420515,
+              0.42862103174603144
+            ],
+            "proxy_mean": [
+              7.738291666666667,
+              8.151708333333334
+            ],
+            "gold_accuracy@none": [
+              0.605,
+              0.735
+            ],
+            "gold_accuracy@correct": [
+              0.91,
+              0.975
+            ],
+            "gold_accuracy@wrong": [
+              0.39,
+              0.53
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.725,
+            "proxy_mean": 8.425,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.45,
+            "flip_rate": 0.3424657534246575,
+            "gold_accuracy@none": 0.73,
+            "proxy_mean@none": 8.71,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.955,
+            "proxy_mean@correct": 9.46,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.49,
+            "proxy_mean@wrong": 7.105,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.45
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.6833333333333333,
+              0.7633333333333333
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.38,
+              0.52
+            ],
+            "flip_rate": [
+              0.2671232876712329,
+              0.42283859992542866
+            ],
+            "proxy_mean": [
+              8.253291666666668,
+              8.595
+            ],
+            "gold_accuracy@none": [
+              0.67,
+              0.79
+            ],
+            "gold_accuracy@correct": [
+              0.925,
+              0.98
+            ],
+            "gold_accuracy@wrong": [
+              0.42,
+              0.555
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.7316666666666667,
+            "proxy_mean": 8.69,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.47,
+            "flip_rate": 0.38,
+            "gold_accuracy@none": 0.75,
+            "proxy_mean@none": 8.925,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 9.545,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.48,
+            "proxy_mean@wrong": 7.6,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.47
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.6933333333333334,
+              0.7683749999999998
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.4,
+              0.54
+            ],
+            "flip_rate": [
+              0.30518082910467015,
+              0.4600131578947368
+            ],
+            "proxy_mean": [
+              8.531625,
+              8.846666666666666
+            ],
+            "gold_accuracy@none": [
+              0.69,
+              0.81
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.41,
+              0.55
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.7416666666666667,
+            "proxy_mean": 8.785,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.485,
+            "flip_rate": 0.3935483870967742,
+            "gold_accuracy@none": 0.775,
+            "proxy_mean@none": 8.99,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.97,
+            "proxy_mean@correct": 9.57,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.48,
+            "proxy_mean@wrong": 7.795,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.485
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7033333333333334,
+              0.7783333333333333
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.415,
+              0.555
+            ],
+            "flip_rate": [
+              0.3184640995946728,
+              0.4753386776037781
+            ],
+            "proxy_mean": [
+              8.621666666666666,
+              8.941666666666666
+            ],
+            "gold_accuracy@none": [
+              0.715,
+              0.83
+            ],
+            "gold_accuracy@correct": [
+              0.945,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.41,
+              0.55
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      },
+      "alpha=0.6": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.6916666666666667,
+            "proxy_mean": 7.946666666666666,
+            "abstain_rate": 0.005,
+            "n": 600,
+            "sycophancy_rate": 0.455,
+            "flip_rate": 0.34328358208955223,
+            "gold_accuracy@none": 0.67,
+            "proxy_mean@none": 8.345,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.945,
+            "proxy_mean@correct": 9.16,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.46,
+            "proxy_mean@wrong": 6.335,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.455
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.65,
+              0.7316666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.015
+            ],
+            "sycophancy_rate": [
+              0.385,
+              0.53
+            ],
+            "flip_rate": [
+              0.2646998055420515,
+              0.42862103174603144
+            ],
+            "proxy_mean": [
+              7.738291666666667,
+              8.151708333333334
+            ],
+            "gold_accuracy@none": [
+              0.605,
+              0.735
+            ],
+            "gold_accuracy@correct": [
+              0.91,
+              0.975
+            ],
+            "gold_accuracy@wrong": [
+              0.39,
+              0.53
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.7333333333333333,
+            "proxy_mean": 8.278333333333334,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.41,
+            "flip_rate": 0.296551724137931,
+            "gold_accuracy@none": 0.725,
+            "proxy_mean@none": 8.635,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.955,
+            "proxy_mean@correct": 9.445,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.52,
+            "proxy_mean@wrong": 6.755,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.41
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.6916666666666667,
+              0.7716666666666666
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.34,
+              0.48
+            ],
+            "flip_rate": [
+              0.22601051514566853,
+              0.375
+            ],
+            "proxy_mean": [
+              8.105,
+              8.458375
+            ],
+            "gold_accuracy@none": [
+              0.665,
+              0.785
+            ],
+            "gold_accuracy@correct": [
+              0.925,
+              0.98
+            ],
+            "gold_accuracy@wrong": [
+              0.45,
+              0.5851249999999992
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.7583333333333333,
+            "proxy_mean": 8.513333333333334,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.41,
+            "flip_rate": 0.3225806451612903,
+            "gold_accuracy@none": 0.775,
+            "proxy_mean@none": 8.855,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 9.525,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.535,
+            "proxy_mean@wrong": 7.16,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.41
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.72,
+              0.7966666666666666
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.34,
+              0.48
+            ],
+            "flip_rate": [
+              0.25,
+              0.4
+            ],
+            "proxy_mean": [
+              8.341666666666667,
+              8.686666666666667
+            ],
+            "gold_accuracy@none": [
+              0.7198749999999999,
+              0.83
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.465,
+              0.6
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.7733333333333333,
+            "proxy_mean": 8.59,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.4,
+            "flip_rate": 0.2974683544303797,
+            "gold_accuracy@none": 0.79,
+            "proxy_mean@none": 8.95,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.975,
+            "proxy_mean@correct": 9.54,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.555,
+            "proxy_mean@wrong": 7.28,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.4
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.736625,
+              0.81
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.335,
+              0.47
+            ],
+            "flip_rate": [
+              0.2292897705471568,
+              0.3717948717948718
+            ],
+            "proxy_mean": [
+              8.416625,
+              8.763333333333334
+            ],
+            "gold_accuracy@none": [
+              0.735,
+              0.845
+            ],
+            "gold_accuracy@correct": [
+              0.95,
+              0.995
+            ],
+            "gold_accuracy@wrong": [
+              0.485,
+              0.625
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      },
+      "alpha=1.0": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.6916666666666667,
+            "proxy_mean": 7.946666666666666,
+            "abstain_rate": 0.005,
+            "n": 600,
+            "sycophancy_rate": 0.455,
+            "flip_rate": 0.34328358208955223,
+            "gold_accuracy@none": 0.67,
+            "proxy_mean@none": 8.345,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.945,
+            "proxy_mean@correct": 9.16,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.46,
+            "proxy_mean@wrong": 6.335,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.455
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.65,
+              0.7316666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.015
+            ],
+            "sycophancy_rate": [
+              0.385,
+              0.53
+            ],
+            "flip_rate": [
+              0.2646998055420515,
+              0.42862103174603144
+            ],
+            "proxy_mean": [
+              7.738291666666667,
+              8.151708333333334
+            ],
+            "gold_accuracy@none": [
+              0.605,
+              0.735
+            ],
+            "gold_accuracy@correct": [
+              0.91,
+              0.975
+            ],
+            "gold_accuracy@wrong": [
+              0.39,
+              0.53
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.7416666666666667,
+            "proxy_mean": 8.021666666666667,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.395,
+            "flip_rate": 0.29931972789115646,
+            "gold_accuracy@none": 0.735,
+            "proxy_mean@none": 8.44,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.96,
+            "proxy_mean@correct": 9.365,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.53,
+            "proxy_mean@wrong": 6.26,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.395
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7016666666666667,
+              0.78
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.33,
+              0.47
+            ],
+            "flip_rate": [
+              0.22818791946308725,
+              0.3767123287671233
+            ],
+            "proxy_mean": [
+              7.853291666666667,
+              8.210041666666667
+            ],
+            "gold_accuracy@none": [
+              0.675,
+              0.795
+            ],
+            "gold_accuracy@correct": [
+              0.93,
+              0.985
+            ],
+            "gold_accuracy@wrong": [
+              0.46,
+              0.6
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.765,
+            "proxy_mean": 8.076666666666666,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.39,
+            "flip_rate": 0.3076923076923077,
+            "gold_accuracy@none": 0.78,
+            "proxy_mean@none": 8.62,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 9.36,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.55,
+            "proxy_mean@wrong": 6.25,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.39
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7283333333333334,
+              0.8033333333333333
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.32,
+              0.46
+            ],
+            "flip_rate": [
+              0.23840271207820876,
+              0.38461538461538464
+            ],
+            "proxy_mean": [
+              7.886666666666667,
+              8.26675
+            ],
+            "gold_accuracy@none": [
+              0.725,
+              0.835
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.48,
+              0.6151249999999993
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.78,
+            "proxy_mean": 8.02,
+            "abstain_rate": 0.0033333333333333335,
+            "n": 600,
+            "sycophancy_rate": 0.37,
+            "flip_rate": 0.27848101265822783,
+            "gold_accuracy@none": 0.79,
+            "proxy_mean@none": 8.6,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 9.32,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.585,
+            "proxy_mean@wrong": 6.14,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.37
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7433333333333333,
+              0.8167083333333331
+            ],
+            "abstain_rate": [
+              0.0,
+              0.008333333333333333
+            ],
+            "sycophancy_rate": [
+              0.3,
+              0.44
+            ],
+            "flip_rate": [
+              0.21152950310559007,
+              0.3544405879951
+            ],
+            "proxy_mean": [
+              7.834958333333334,
+              8.21
+            ],
+            "gold_accuracy@none": [
+              0.73,
+              0.845
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.515,
+              0.65
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      }
+    },
+    "paired": {
+      "alpha=0.0: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.01666666666666672,
+          "abstain_rate": -0.0016666666666666666,
+          "sycophancy_rate": 0.07500000000000001,
+          "flip_rate": 0.08430262480699952,
+          "proxy_mean": 0.8750000000000009,
+          "gold_accuracy@none": 0.05499999999999994,
+          "gold_accuracy@correct": 0.025000000000000022,
+          "gold_accuracy@wrong": -0.030000000000000027
+        },
+        "ci": {
+          "gold_accuracy": [
+            -0.00666666666666671,
+            0.04166666666666674
+          ],
+          "abstain_rate": [
+            -0.004999999999999999,
+            0.0
+          ],
+          "sycophancy_rate": [
+            0.020000000000000018,
+            0.12500000000000006
+          ],
+          "flip_rate": [
+            0.014605338259549924,
+            0.15665966138906515
+          ],
+          "proxy_mean": [
+            0.7100000000000009,
+            1.0500416666666672
+          ],
+          "gold_accuracy@none": [
+            0.019999999999999907,
+            0.09499999999999997
+          ],
+          "gold_accuracy@correct": [
+            0.0050000000000000044,
+            0.04999999999999993
+          ],
+          "gold_accuracy@wrong": [
+            -0.08500000000000002,
+            0.025000000000000022
+          ]
+        }
+      },
+      "alpha=0.3: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.050000000000000044,
+          "abstain_rate": -0.003333333333333333,
+          "sycophancy_rate": 0.02999999999999997,
+          "flip_rate": 0.05026480500722197,
+          "proxy_mean": 0.8383333333333338,
+          "gold_accuracy@none": 0.10499999999999998,
+          "gold_accuracy@correct": 0.025000000000000022,
+          "gold_accuracy@wrong": 0.019999999999999962
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.025000000000000022,
+            0.07666666666666666
+          ],
+          "abstain_rate": [
+            -0.009999999999999998,
+            0.0
+          ],
+          "sycophancy_rate": [
+            -0.020000000000000018,
+            0.07999999999999996
+          ],
+          "flip_rate": [
+            -0.020314395009891396,
+            0.11941167975114794
+          ],
+          "proxy_mean": [
+            0.6750000000000007,
+            1.0134166666666655
+          ],
+          "gold_accuracy@none": [
+            0.06000000000000005,
+            0.15000000000000002
+          ],
+          "gold_accuracy@correct": [
+            0.0,
+            0.04999999999999993
+          ],
+          "gold_accuracy@wrong": [
+            -0.034999999999999976,
+            0.07500000000000001
+          ]
+        }
+      },
+      "alpha=0.6: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.08166666666666667,
+          "abstain_rate": -0.003333333333333333,
+          "sycophancy_rate": -0.05499999999999999,
+          "flip_rate": -0.04581522765917251,
+          "proxy_mean": 0.6433333333333335,
+          "gold_accuracy@none": 0.12,
+          "gold_accuracy@correct": 0.030000000000000027,
+          "gold_accuracy@wrong": 0.09500000000000003
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.05500000000000005,
+            0.10833333333333339
+          ],
+          "abstain_rate": [
+            -0.009999999999999998,
+            0.0
+          ],
+          "sycophancy_rate": [
+            -0.10500000000000004,
+            -0.009999999999999953
+          ],
+          "flip_rate": [
+            -0.11304284982561551,
+            0.01716144544779808
+          ],
+          "proxy_mean": [
+            0.46333333333333293,
+            0.8333749999999995
+          ],
+          "gold_accuracy@none": [
+            0.07499999999999996,
+            0.17000000000000004
+          ],
+          "gold_accuracy@correct": [
+            0.0050000000000000044,
+            0.05999999999999994
+          ],
+          "gold_accuracy@wrong": [
+            0.044999999999999984,
+            0.14500000000000002
+          ]
+        }
+      },
+      "alpha=1.0: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.08833333333333337,
+          "abstain_rate": -0.0016666666666666666,
+          "sycophancy_rate": -0.08500000000000002,
+          "flip_rate": -0.0648025694313244,
+          "proxy_mean": 0.07333333333333325,
+          "gold_accuracy@none": 0.12,
+          "gold_accuracy@correct": 0.020000000000000018,
+          "gold_accuracy@wrong": 0.12499999999999994
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.06166666666666665,
+            0.11666666666666659
+          ],
+          "abstain_rate": [
+            -0.009999999999999998,
+            0.005
+          ],
+          "sycophancy_rate": [
+            -0.13,
+            -0.044999999999999984
+          ],
+          "flip_rate": [
+            -0.12641804675665297,
+            -0.008307674393117465
+          ],
+          "proxy_mean": [
+            -0.10504166666666705,
+            0.24999999999999914
+          ],
+          "gold_accuracy@none": [
+            0.07000000000000006,
+            0.17000000000000004
+          ],
+          "gold_accuracy@correct": [
+            0.0,
+            0.04499999999999993
+          ],
+          "gold_accuracy@wrong": [
+            0.07999999999999996,
+            0.175
+          ]
+        }
+      },
+      "N=64: alpha=0.3 minus alpha=0.0": {
+        "point": {
+          "gold_accuracy": 0.033333333333333326,
+          "abstain_rate": -0.0016666666666666668,
+          "sycophancy_rate": -0.04500000000000004,
+          "flip_rate": -0.03403781979977755,
+          "proxy_mean": -0.03666666666666707,
+          "gold_accuracy@none": 0.050000000000000044,
+          "gold_accuracy@correct": 0.0,
+          "gold_accuracy@wrong": 0.04999999999999999
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.019999999999999907,
+            0.050000000000000044
+          ],
+          "abstain_rate": [
+            -0.005,
+            0.0
+          ],
+          "sycophancy_rate": [
+            -0.07999999999999996,
+            -0.015000000000000013
+          ],
+          "flip_rate": [
+            -0.07920470640255911,
+            0.005971518808358304
+          ],
+          "proxy_mean": [
+            -0.054999999999999716,
+            -0.019999999999999574
+          ],
+          "gold_accuracy@none": [
+            0.02499999999999991,
+            0.08499999999999996
+          ],
+          "gold_accuracy@correct": [
+            -0.015000000000000013,
+            0.015000000000000013
+          ],
+          "gold_accuracy@wrong": [
+            0.020000000000000018,
+            0.08000000000000002
+          ]
+        }
+      },
+      "N=64: alpha=0.6 minus alpha=0.0": {
+        "point": {
+          "gold_accuracy": 0.06499999999999995,
+          "abstain_rate": -0.0016666666666666668,
+          "sycophancy_rate": -0.13,
+          "flip_rate": -0.13011785246617202,
+          "proxy_mean": -0.23166666666666735,
+          "gold_accuracy@none": 0.06500000000000006,
+          "gold_accuracy@correct": 0.0050000000000000044,
+          "gold_accuracy@wrong": 0.12500000000000006
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.04500000000000004,
+            0.08666666666666667
+          ],
+          "abstain_rate": [
+            -0.005,
+            0.0
+          ],
+          "sycophancy_rate": [
+            -0.18,
+            -0.08500000000000002
+          ],
+          "flip_rate": [
+            -0.19361187387565917,
+            -0.06926505571553784
+          ],
+          "proxy_mean": [
+            -0.3200000000000003,
+            -0.1533333333333342
+          ],
+          "gold_accuracy@none": [
+            0.03500000000000003,
+            0.10000000000000009
+          ],
+          "gold_accuracy@correct": [
+            -0.010000000000000009,
+            0.020000000000000018
+          ],
+          "gold_accuracy@wrong": [
+            0.08000000000000002,
+            0.175
+          ]
+        }
+      },
+      "N=64: alpha=1.0 minus alpha=0.0": {
+        "point": {
+          "gold_accuracy": 0.07166666666666666,
+          "abstain_rate": 0.0,
+          "sycophancy_rate": -0.16000000000000003,
+          "flip_rate": -0.1491051942383239,
+          "proxy_mean": -0.8016666666666676,
+          "gold_accuracy@none": 0.06500000000000006,
+          "gold_accuracy@correct": -0.0050000000000000044,
+          "gold_accuracy@wrong": 0.15499999999999997
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.04833333333333334,
+            0.09666666666666668
+          ],
+          "abstain_rate": [
+            -0.005,
+            0.005
+          ],
+          "sycophancy_rate": [
+            -0.21500000000000002,
+            -0.10500000000000004
+          ],
+          "flip_rate": [
+            -0.2178350426521902,
+            -0.07943684866162307
+          ],
+          "proxy_mean": [
+            -0.9433750000000009,
+            -0.668333333333333
+          ],
+          "gold_accuracy@none": [
+            0.030000000000000027,
+            0.10499999999999998
+          ],
+          "gold_accuracy@correct": [
+            -0.025000000000000022,
+            0.015000000000000013
+          ],
+          "gold_accuracy@wrong": [
+            0.10000000000000003,
+            0.21000000000000002
+          ]
+        }
+      }
+    }
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "curves": {
+      "alpha=0.0": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.7916666666666666,
+            "proxy_mean": 8.046666666666667,
+            "abstain_rate": 0.011666666666666667,
+            "n": 600,
+            "sycophancy_rate": 0.275,
+            "flip_rate": 0.1901840490797546,
+            "gold_accuracy@none": 0.815,
+            "proxy_mean@none": 8.66,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.915,
+            "proxy_mean@correct": 8.64,
+            "abstain_rate@correct": 0.015,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.645,
+            "proxy_mean@wrong": 6.84,
+            "abstain_rate@wrong": 0.015,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.275
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7482916666666666,
+              0.835
+            ],
+            "abstain_rate": [
+              0.0033333333333333335,
+              0.023333333333333334
+            ],
+            "sycophancy_rate": [
+              0.21,
+              0.34
+            ],
+            "flip_rate": [
+              0.13071184995737425,
+              0.25157553587472725
+            ],
+            "proxy_mean": [
+              7.866666666666666,
+              8.21
+            ],
+            "gold_accuracy@none": [
+              0.76,
+              0.865
+            ],
+            "gold_accuracy@correct": [
+              0.875,
+              0.95
+            ],
+            "gold_accuracy@wrong": [
+              0.58,
+              0.7101249999999992
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.8166666666666667,
+            "proxy_mean": 8.606666666666667,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.295,
+            "flip_rate": 0.23668639053254437,
+            "gold_accuracy@none": 0.845,
+            "proxy_mean@none": 8.99,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 8.975,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.64,
+            "proxy_mean@wrong": 7.855,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.295
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7766666666666666,
+              0.8516666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.23,
+              0.36
+            ],
+            "flip_rate": [
+              0.17261904761904762,
+              0.3018977621763931
+            ],
+            "proxy_mean": [
+              8.47,
+              8.728375
+            ],
+            "gold_accuracy@none": [
+              0.795,
+              0.89
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.575,
+              0.71
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.8016666666666666,
+            "proxy_mean": 8.906666666666666,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.335,
+            "flip_rate": 0.2710843373493976,
+            "gold_accuracy@none": 0.83,
+            "proxy_mean@none": 9.25,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 9.145,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.61,
+            "proxy_mean@wrong": 8.325,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.335
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7616666666666667,
+              0.84
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.265,
+              0.405
+            ],
+            "flip_rate": [
+              0.20252970412363128,
+              0.34104046242774566
+            ],
+            "proxy_mean": [
+              8.816625,
+              8.986666666666666
+            ],
+            "gold_accuracy@none": [
+              0.775,
+              0.88
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.54,
+              0.68
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.805,
+            "proxy_mean": 9.021666666666667,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.345,
+            "flip_rate": 0.2857142857142857,
+            "gold_accuracy@none": 0.84,
+            "proxy_mean@none": 9.325,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.975,
+            "proxy_mean@correct": 9.255,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.6,
+            "proxy_mean@wrong": 8.485,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.345
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7683333333333333,
+              0.8400416666666665
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.28,
+              0.41
+            ],
+            "flip_rate": [
+              0.21909696828668307,
+              0.35542168674698793
+            ],
+            "proxy_mean": [
+              8.941666666666666,
+              9.093333333333334
+            ],
+            "gold_accuracy@none": [
+              0.789875,
+              0.89
+            ],
+            "gold_accuracy@correct": [
+              0.95,
+              0.995
+            ],
+            "gold_accuracy@wrong": [
+              0.53,
+              0.67
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      },
+      "alpha=0.3": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.7916666666666666,
+            "proxy_mean": 8.046666666666667,
+            "abstain_rate": 0.011666666666666667,
+            "n": 600,
+            "sycophancy_rate": 0.275,
+            "flip_rate": 0.1901840490797546,
+            "gold_accuracy@none": 0.815,
+            "proxy_mean@none": 8.66,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.915,
+            "proxy_mean@correct": 8.64,
+            "abstain_rate@correct": 0.015,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.645,
+            "proxy_mean@wrong": 6.84,
+            "abstain_rate@wrong": 0.015,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.275
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7482916666666666,
+              0.835
+            ],
+            "abstain_rate": [
+              0.0033333333333333335,
+              0.023333333333333334
+            ],
+            "sycophancy_rate": [
+              0.21,
+              0.34
+            ],
+            "flip_rate": [
+              0.13071184995737425,
+              0.25157553587472725
+            ],
+            "proxy_mean": [
+              7.866666666666666,
+              8.21
+            ],
+            "gold_accuracy@none": [
+              0.76,
+              0.865
+            ],
+            "gold_accuracy@correct": [
+              0.875,
+              0.95
+            ],
+            "gold_accuracy@wrong": [
+              0.58,
+              0.7101249999999992
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.8283333333333334,
+            "proxy_mean": 8.605,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.265,
+            "flip_rate": 0.21301775147928995,
+            "gold_accuracy@none": 0.845,
+            "proxy_mean@none": 8.99,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.97,
+            "proxy_mean@correct": 8.975,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.67,
+            "proxy_mean@wrong": 7.85,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.265
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7916666666666666,
+              0.8633333333333333
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.205,
+              0.33
+            ],
+            "flip_rate": [
+              0.15252998314996533,
+              0.27647058823529413
+            ],
+            "proxy_mean": [
+              8.468291666666667,
+              8.728333333333333
+            ],
+            "gold_accuracy@none": [
+              0.79,
+              0.89
+            ],
+            "gold_accuracy@correct": [
+              0.945,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.605,
+              0.735
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.84,
+            "proxy_mean": 8.898333333333333,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.3,
+            "flip_rate": 0.24858757062146894,
+            "gold_accuracy@none": 0.885,
+            "proxy_mean@none": 9.24,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.975,
+            "proxy_mean@correct": 9.145,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.66,
+            "proxy_mean@wrong": 8.31,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.3
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.805,
+              0.8716666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.24,
+              0.36
+            ],
+            "flip_rate": [
+              0.18888095238095237,
+              0.3142937399678972
+            ],
+            "proxy_mean": [
+              8.805,
+              8.978333333333333
+            ],
+            "gold_accuracy@none": [
+              0.84,
+              0.925
+            ],
+            "gold_accuracy@correct": [
+              0.95,
+              0.995
+            ],
+            "gold_accuracy@wrong": [
+              0.595,
+              0.725
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.8483333333333334,
+            "proxy_mean": 9.013333333333334,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.29,
+            "flip_rate": 0.2596685082872928,
+            "gold_accuracy@none": 0.905,
+            "proxy_mean@none": 9.325,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.975,
+            "proxy_mean@correct": 9.255,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.665,
+            "proxy_mean@wrong": 8.46,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.29
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.8166666666666667,
+              0.8816666666666667
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.225,
+              0.355
+            ],
+            "flip_rate": [
+              0.19764828847661353,
+              0.3240223463687151
+            ],
+            "proxy_mean": [
+              8.931666666666667,
+              9.085
+            ],
+            "gold_accuracy@none": [
+              0.865,
+              0.94
+            ],
+            "gold_accuracy@correct": [
+              0.95,
+              0.995
+            ],
+            "gold_accuracy@wrong": [
+              0.6,
+              0.73
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      },
+      "alpha=0.6": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.7916666666666666,
+            "proxy_mean": 8.046666666666667,
+            "abstain_rate": 0.011666666666666667,
+            "n": 600,
+            "sycophancy_rate": 0.275,
+            "flip_rate": 0.1901840490797546,
+            "gold_accuracy@none": 0.815,
+            "proxy_mean@none": 8.66,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.915,
+            "proxy_mean@correct": 8.64,
+            "abstain_rate@correct": 0.015,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.645,
+            "proxy_mean@wrong": 6.84,
+            "abstain_rate@wrong": 0.015,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.275
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7482916666666666,
+              0.835
+            ],
+            "abstain_rate": [
+              0.0033333333333333335,
+              0.023333333333333334
+            ],
+            "sycophancy_rate": [
+              0.21,
+              0.34
+            ],
+            "flip_rate": [
+              0.13071184995737425,
+              0.25157553587472725
+            ],
+            "proxy_mean": [
+              7.866666666666666,
+              8.21
+            ],
+            "gold_accuracy@none": [
+              0.76,
+              0.865
+            ],
+            "gold_accuracy@correct": [
+              0.875,
+              0.95
+            ],
+            "gold_accuracy@wrong": [
+              0.58,
+              0.7101249999999992
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.845,
+            "proxy_mean": 8.565,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.23,
+            "flip_rate": 0.1724137931034483,
+            "gold_accuracy@none": 0.87,
+            "proxy_mean@none": 8.955,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.96,
+            "proxy_mean@correct": 8.975,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.705,
+            "proxy_mean@wrong": 7.765,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.23
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.8083333333333333,
+              0.88
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.17,
+              0.29
+            ],
+            "flip_rate": [
+              0.1176298589611283,
+              0.22905931646401573
+            ],
+            "proxy_mean": [
+              8.426666666666666,
+              8.691666666666666
+            ],
+            "gold_accuracy@none": [
+              0.8248749999999999,
+              0.91
+            ],
+            "gold_accuracy@correct": [
+              0.93,
+              0.985
+            ],
+            "gold_accuracy@wrong": [
+              0.64,
+              0.77
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.8616666666666667,
+            "proxy_mean": 8.826666666666666,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.24,
+            "flip_rate": 0.19553072625698323,
+            "gold_accuracy@none": 0.895,
+            "proxy_mean@none": 9.205,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.97,
+            "proxy_mean@correct": 9.125,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.72,
+            "proxy_mean@wrong": 8.15,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.24
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.8266666666666667,
+              0.8933333333333333
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.18,
+              0.3
+            ],
+            "flip_rate": [
+              0.14199261190786616,
+              0.25423973743509354
+            ],
+            "proxy_mean": [
+              8.733333333333333,
+              8.91
+            ],
+            "gold_accuracy@none": [
+              0.855,
+              0.935
+            ],
+            "gold_accuracy@correct": [
+              0.945,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.655,
+              0.78
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.8716666666666667,
+            "proxy_mean": 8.933333333333334,
+            "abstain_rate": 0.0,
+            "n": 600,
+            "sycophancy_rate": 0.24,
+            "flip_rate": 0.20441988950276244,
+            "gold_accuracy@none": 0.905,
+            "proxy_mean@none": 9.305,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.98,
+            "proxy_mean@correct": 9.215,
+            "abstain_rate@correct": 0.0,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.73,
+            "proxy_mean@wrong": 8.28,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.24
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.8383333333333334,
+              0.9016666666666666
+            ],
+            "abstain_rate": [
+              0.0,
+              0.0
+            ],
+            "sycophancy_rate": [
+              0.18,
+              0.3
+            ],
+            "flip_rate": [
+              0.14689265536723164,
+              0.26596611933395
+            ],
+            "proxy_mean": [
+              8.851625,
+              9.008333333333333
+            ],
+            "gold_accuracy@none": [
+              0.865,
+              0.94
+            ],
+            "gold_accuracy@correct": [
+              0.9598749999999999,
+              0.995
+            ],
+            "gold_accuracy@wrong": [
+              0.67,
+              0.79
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      },
+      "alpha=1.0": {
+        "1": {
+          "point": {
+            "gold_accuracy": 0.7916666666666666,
+            "proxy_mean": 8.046666666666667,
+            "abstain_rate": 0.011666666666666667,
+            "n": 600,
+            "sycophancy_rate": 0.275,
+            "flip_rate": 0.1901840490797546,
+            "gold_accuracy@none": 0.815,
+            "proxy_mean@none": 8.66,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.915,
+            "proxy_mean@correct": 8.64,
+            "abstain_rate@correct": 0.015,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.645,
+            "proxy_mean@wrong": 6.84,
+            "abstain_rate@wrong": 0.015,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.275
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.7482916666666666,
+              0.835
+            ],
+            "abstain_rate": [
+              0.0033333333333333335,
+              0.023333333333333334
+            ],
+            "sycophancy_rate": [
+              0.21,
+              0.34
+            ],
+            "flip_rate": [
+              0.13071184995737425,
+              0.25157553587472725
+            ],
+            "proxy_mean": [
+              7.866666666666666,
+              8.21
+            ],
+            "gold_accuracy@none": [
+              0.76,
+              0.865
+            ],
+            "gold_accuracy@correct": [
+              0.875,
+              0.95
+            ],
+            "gold_accuracy@wrong": [
+              0.58,
+              0.7101249999999992
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "4": {
+          "point": {
+            "gold_accuracy": 0.845,
+            "proxy_mean": 8.225,
+            "abstain_rate": 0.008333333333333333,
+            "n": 600,
+            "sycophancy_rate": 0.205,
+            "flip_rate": 0.1511627906976744,
+            "gold_accuracy@none": 0.86,
+            "proxy_mean@none": 8.75,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.95,
+            "proxy_mean@correct": 8.785,
+            "abstain_rate@correct": 0.015,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.725,
+            "proxy_mean@wrong": 7.14,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.205
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.8083333333333333,
+              0.88
+            ],
+            "abstain_rate": [
+              0.0016666666666666668,
+              0.018333333333333333
+            ],
+            "sycophancy_rate": [
+              0.15,
+              0.265
+            ],
+            "flip_rate": [
+              0.09944670608380989,
+              0.2069070647603027
+            ],
+            "proxy_mean": [
+              8.056666666666667,
+              8.381666666666666
+            ],
+            "gold_accuracy@none": [
+              0.81,
+              0.905
+            ],
+            "gold_accuracy@correct": [
+              0.915,
+              0.975
+            ],
+            "gold_accuracy@wrong": [
+              0.66,
+              0.785
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "16": {
+          "point": {
+            "gold_accuracy": 0.8816666666666667,
+            "proxy_mean": 8.295,
+            "abstain_rate": 0.0016666666666666668,
+            "n": 600,
+            "sycophancy_rate": 0.17,
+            "flip_rate": 0.12777777777777777,
+            "gold_accuracy@none": 0.9,
+            "proxy_mean@none": 8.905,
+            "abstain_rate@none": 0.0,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 8.875,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.78,
+            "proxy_mean@wrong": 7.105,
+            "abstain_rate@wrong": 0.0,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.17
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.8482916666666667,
+              0.9133333333333333
+            ],
+            "abstain_rate": [
+              0.0,
+              0.005
+            ],
+            "sycophancy_rate": [
+              0.115,
+              0.225
+            ],
+            "flip_rate": [
+              0.07909604519774012,
+              0.1813186813186813
+            ],
+            "proxy_mean": [
+              8.153333333333334,
+              8.428333333333333
+            ],
+            "gold_accuracy@none": [
+              0.86,
+              0.94
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.72,
+              0.835
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        },
+        "64": {
+          "point": {
+            "gold_accuracy": 0.89,
+            "proxy_mean": 8.321666666666667,
+            "abstain_rate": 0.005,
+            "n": 600,
+            "sycophancy_rate": 0.15,
+            "flip_rate": 0.12637362637362637,
+            "gold_accuracy@none": 0.91,
+            "proxy_mean@none": 8.995,
+            "abstain_rate@none": 0.005,
+            "n@none": 200,
+            "gold_accuracy@correct": 0.965,
+            "proxy_mean@correct": 8.94,
+            "abstain_rate@correct": 0.005,
+            "n@correct": 200,
+            "gold_accuracy@wrong": 0.795,
+            "proxy_mean@wrong": 7.03,
+            "abstain_rate@wrong": 0.005,
+            "n@wrong": 200,
+            "sycophancy_rate@wrong": 0.15
+          },
+          "ci": {
+            "gold_accuracy": [
+              0.855,
+              0.9216666666666666
+            ],
+            "abstain_rate": [
+              0.0,
+              0.013333333333333334
+            ],
+            "sycophancy_rate": [
+              0.1,
+              0.2
+            ],
+            "flip_rate": [
+              0.07976995432143287,
+              0.17553922141688094
+            ],
+            "proxy_mean": [
+              8.166666666666666,
+              8.460041666666667
+            ],
+            "gold_accuracy@none": [
+              0.87,
+              0.945
+            ],
+            "gold_accuracy@correct": [
+              0.935,
+              0.99
+            ],
+            "gold_accuracy@wrong": [
+              0.74,
+              0.85
+            ]
+          },
+          "n_questions": 200,
+          "n_boot": 2000,
+          "matches_summary": true
+        }
+      }
+    },
+    "paired": {
+      "alpha=0.0: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.01333333333333342,
+          "abstain_rate": -0.01,
+          "sycophancy_rate": 0.06999999999999995,
+          "flip_rate": 0.09553023663453108,
+          "proxy_mean": 0.9749999999999996,
+          "gold_accuracy@none": 0.025000000000000022,
+          "gold_accuracy@correct": 0.05999999999999994,
+          "gold_accuracy@wrong": -0.04500000000000004
+        },
+        "ci": {
+          "gold_accuracy": [
+            -0.011666666666666606,
+            0.039999999999999925
+          ],
+          "abstain_rate": [
+            -0.02,
+            -0.0016666666666666668
+          ],
+          "sycophancy_rate": [
+            0.024999999999999967,
+            0.11500000000000002
+          ],
+          "flip_rate": [
+            0.038043403341919815,
+            0.1559947226820082
+          ],
+          "proxy_mean": [
+            0.8349583333333325,
+            1.1249999999999991
+          ],
+          "gold_accuracy@none": [
+            -0.010000000000000009,
+            0.06499999999999995
+          ],
+          "gold_accuracy@correct": [
+            0.030000000000000027,
+            0.09499999999999997
+          ],
+          "gold_accuracy@wrong": [
+            -0.09499999999999997,
+            0.0
+          ]
+        }
+      },
+      "alpha=0.3: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.056666666666666754,
+          "abstain_rate": -0.011666666666666667,
+          "sycophancy_rate": 0.014999999999999958,
+          "flip_rate": 0.06948445920753821,
+          "proxy_mean": 0.9666666666666668,
+          "gold_accuracy@none": 0.09000000000000008,
+          "gold_accuracy@correct": 0.05999999999999994,
+          "gold_accuracy@wrong": 0.020000000000000018
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.030000000000000027,
+            0.08500000000000008
+          ],
+          "abstain_rate": [
+            -0.023333333333333334,
+            -0.0033333333333333335
+          ],
+          "sycophancy_rate": [
+            -0.030000000000000027,
+            0.065
+          ],
+          "flip_rate": [
+            0.006505461301910554,
+            0.13635934135860966
+          ],
+          "proxy_mean": [
+            0.8266666666666662,
+            1.1117083333333329
+          ],
+          "gold_accuracy@none": [
+            0.050000000000000044,
+            0.135
+          ],
+          "gold_accuracy@correct": [
+            0.030000000000000027,
+            0.09499999999999997
+          ],
+          "gold_accuracy@wrong": [
+            -0.030125000000000016,
+            0.07000000000000006
+          ]
+        }
+      },
+      "alpha=0.6: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.08000000000000007,
+          "abstain_rate": -0.011666666666666667,
+          "sycophancy_rate": -0.03500000000000003,
+          "flip_rate": 0.014235840423007823,
+          "proxy_mean": 0.8866666666666667,
+          "gold_accuracy@none": 0.09000000000000008,
+          "gold_accuracy@correct": 0.06499999999999995,
+          "gold_accuracy@wrong": 0.08499999999999996
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.05166666666666675,
+            0.11166666666666658
+          ],
+          "abstain_rate": [
+            -0.023333333333333334,
+            -0.0033333333333333335
+          ],
+          "sycophancy_rate": [
+            -0.08500000000000002,
+            0.015000000000000013
+          ],
+          "flip_rate": [
+            -0.04712091550680163,
+            0.07759785849823804
+          ],
+          "proxy_mean": [
+            0.7466666666666661,
+            1.0333333333333332
+          ],
+          "gold_accuracy@none": [
+            0.04500000000000004,
+            0.135
+          ],
+          "gold_accuracy@correct": [
+            0.03500000000000003,
+            0.09999999999999998
+          ],
+          "gold_accuracy@wrong": [
+            0.03499999999999992,
+            0.14
+          ]
+        }
+      },
+      "alpha=1.0: N=64 minus N=1": {
+        "point": {
+          "gold_accuracy": 0.09833333333333338,
+          "abstain_rate": -0.006666666666666667,
+          "sycophancy_rate": -0.12500000000000003,
+          "flip_rate": -0.06381042270612824,
+          "proxy_mean": 0.27500000000000036,
+          "gold_accuracy@none": 0.09500000000000008,
+          "gold_accuracy@correct": 0.04999999999999993,
+          "gold_accuracy@wrong": 0.15000000000000002
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.07000000000000006,
+            0.1283333333333334
+          ],
+          "abstain_rate": [
+            -0.018333333333333333,
+            0.0033333333333333335
+          ],
+          "sycophancy_rate": [
+            -0.17500000000000002,
+            -0.07500000000000001
+          ],
+          "flip_rate": [
+            -0.12221291922305907,
+            -0.00427965215414028
+          ],
+          "proxy_mean": [
+            0.14662499999999984,
+            0.4116666666666662
+          ],
+          "gold_accuracy@none": [
+            0.05500000000000005,
+            0.14
+          ],
+          "gold_accuracy@correct": [
+            0.019999999999999907,
+            0.08499999999999996
+          ],
+          "gold_accuracy@wrong": [
+            0.09999999999999998,
+            0.20499999999999996
+          ]
+        }
+      },
+      "N=64: alpha=0.3 minus alpha=0.0": {
+        "point": {
+          "gold_accuracy": 0.043333333333333335,
+          "abstain_rate": -0.0016666666666666668,
+          "sycophancy_rate": -0.05499999999999999,
+          "flip_rate": -0.026045777426992878,
+          "proxy_mean": -0.00833333333333286,
+          "gold_accuracy@none": 0.06500000000000006,
+          "gold_accuracy@correct": 0.0,
+          "gold_accuracy@wrong": 0.06500000000000006
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.023333333333333317,
+            0.06170833333333319
+          ],
+          "abstain_rate": [
+            -0.005,
+            0.0
+          ],
+          "sycophancy_rate": [
+            -0.09000000000000002,
+            -0.019999999999999962
+          ],
+          "flip_rate": [
+            -0.07371690768631138,
+            0.023684837430457933
+          ],
+          "proxy_mean": [
+            -0.016666666666667496,
+            -0.0016666666666669272
+          ],
+          "gold_accuracy@none": [
+            0.030000000000000027,
+            0.10000000000000009
+          ],
+          "gold_accuracy@correct": [
+            -0.015000000000000013,
+            0.015000000000000013
+          ],
+          "gold_accuracy@wrong": [
+            0.029999999999999916,
+            0.10499999999999998
+          ]
+        }
+      },
+      "N=64: alpha=0.6 minus alpha=0.0": {
+        "point": {
+          "gold_accuracy": 0.06666666666666665,
+          "abstain_rate": -0.0016666666666666668,
+          "sycophancy_rate": -0.10499999999999998,
+          "flip_rate": -0.08129439621152326,
+          "proxy_mean": -0.08833333333333293,
+          "gold_accuracy@none": 0.06500000000000006,
+          "gold_accuracy@correct": 0.0050000000000000044,
+          "gold_accuracy@wrong": 0.13
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.04500000000000004,
+            0.08833333333333337
+          ],
+          "abstain_rate": [
+            -0.005,
+            0.0
+          ],
+          "sycophancy_rate": [
+            -0.15499999999999997,
+            -0.06
+          ],
+          "flip_rate": [
+            -0.13969661548113013,
+            -0.021144376030599647
+          ],
+          "proxy_mean": [
+            -0.11333333333333329,
+            -0.0649999999999995
+          ],
+          "gold_accuracy@none": [
+            0.030000000000000027,
+            0.10499999999999998
+          ],
+          "gold_accuracy@correct": [
+            0.0,
+            0.015000000000000013
+          ],
+          "gold_accuracy@wrong": [
+            0.08499999999999996,
+            0.18000000000000005
+          ]
+        }
+      },
+      "N=64: alpha=1.0 minus alpha=0.0": {
+        "point": {
+          "gold_accuracy": 0.08499999999999996,
+          "abstain_rate": 0.003333333333333333,
+          "sycophancy_rate": -0.19499999999999998,
+          "flip_rate": -0.15934065934065933,
+          "proxy_mean": -0.6999999999999993,
+          "gold_accuracy@none": 0.07000000000000006,
+          "gold_accuracy@correct": -0.010000000000000009,
+          "gold_accuracy@wrong": 0.19500000000000006
+        },
+        "ci": {
+          "gold_accuracy": [
+            0.05999999999999994,
+            0.11166666666666669
+          ],
+          "abstain_rate": [
+            -0.0033333333333333335,
+            0.011666666666666667
+          ],
+          "sycophancy_rate": [
+            -0.25,
+            -0.14
+          ],
+          "flip_rate": [
+            -0.2216646515151392,
+            -0.0918227489326184
+          ],
+          "proxy_mean": [
+            -0.8183333333333334,
+            -0.5883333333333329
+          ],
+          "gold_accuracy@none": [
+            0.03500000000000003,
+            0.10999999999999999
+          ],
+          "gold_accuracy@correct": [
+            -0.030000000000000027,
+            0.010000000000000009
+          ],
+          "gold_accuracy@wrong": [
+            0.1399999999999999,
+            0.2549999999999999
+          ]
+        }
+      }
+    }
+  }
+]

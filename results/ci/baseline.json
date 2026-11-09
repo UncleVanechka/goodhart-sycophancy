@@ -1,0 +1,124 @@
+[
+  {
+    "point": {
+      "gold_accuracy": 0.6811111111111111,
+      "proxy_mean": 7.815555555555555,
+      "abstain_rate": 0.011111111111111112,
+      "n": 900,
+      "sycophancy_rate": 0.45666666666666667,
+      "flip_rate": 0.3415841584158416,
+      "gold_accuracy@none": 0.6733333333333333,
+      "proxy_mean@none": 8.153333333333334,
+      "abstain_rate@none": 0.013333333333333334,
+      "n@none": 300,
+      "gold_accuracy@correct": 0.9333333333333333,
+      "proxy_mean@correct": 9.086666666666666,
+      "abstain_rate@correct": 0.01,
+      "n@correct": 300,
+      "gold_accuracy@wrong": 0.43666666666666665,
+      "proxy_mean@wrong": 6.206666666666667,
+      "abstain_rate@wrong": 0.01,
+      "n@wrong": 300,
+      "sycophancy_rate@wrong": 0.45666666666666667
+    },
+    "ci": {
+      "gold_accuracy": [
+        0.6466388888888889,
+        0.7155555555555555
+      ],
+      "abstain_rate": [
+        0.0011111111111111111,
+        0.024444444444444446
+      ],
+      "sycophancy_rate": [
+        0.4,
+        0.5134166666666662
+      ],
+      "flip_rate": [
+        0.2766939957943716,
+        0.41117478320642975
+      ],
+      "proxy_mean": [
+        7.623305555555556,
+        7.9944444444444445
+      ],
+      "gold_accuracy@none": [
+        0.62,
+        0.7266666666666667
+      ],
+      "gold_accuracy@correct": [
+        0.9033333333333333,
+        0.96
+      ],
+      "gold_accuracy@wrong": [
+        0.38,
+        0.49333333333333335
+      ]
+    },
+    "n_questions": 300,
+    "n_boot": 2000,
+    "model": "Qwen/Qwen3-1.7B",
+    "matches_summary": true
+  },
+  {
+    "point": {
+      "gold_accuracy": 0.8033333333333333,
+      "proxy_mean": 8.017777777777777,
+      "abstain_rate": 0.012222222222222223,
+      "n": 900,
+      "sycophancy_rate": 0.23333333333333334,
+      "flip_rate": 0.1598360655737705,
+      "gold_accuracy@none": 0.8133333333333334,
+      "proxy_mean@none": 8.666666666666666,
+      "abstain_rate@none": 0.01,
+      "n@none": 300,
+      "gold_accuracy@correct": 0.91,
+      "proxy_mean@correct": 8.51,
+      "abstain_rate@correct": 0.013333333333333334,
+      "n@correct": 300,
+      "gold_accuracy@wrong": 0.6866666666666666,
+      "proxy_mean@wrong": 6.876666666666667,
+      "abstain_rate@wrong": 0.013333333333333334,
+      "n@wrong": 300,
+      "sycophancy_rate@wrong": 0.23333333333333334
+    },
+    "ci": {
+      "gold_accuracy": [
+        0.77,
+        0.8366666666666667
+      ],
+      "abstain_rate": [
+        0.0022222222222222222,
+        0.024444444444444446
+      ],
+      "sycophancy_rate": [
+        0.18666666666666668,
+        0.28
+      ],
+      "flip_rate": [
+        0.11522633744855967,
+        0.20564806517987522
+      ],
+      "proxy_mean": [
+        7.866638888888889,
+        8.164472222222223
+      ],
+      "gold_accuracy@none": [
+        0.77,
+        0.8533333333333334
+      ],
+      "gold_accuracy@correct": [
+        0.88,
+        0.94
+      ],
+      "gold_accuracy@wrong": [
+        0.6365833333333334,
+        0.7366666666666667
+      ]
+    },
+    "n_questions": 300,
+    "n_boot": 2000,
+    "model": "Qwen/Qwen3-4B",
+    "matches_summary": true
+  }
+]

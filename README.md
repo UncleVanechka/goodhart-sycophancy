@@ -48,10 +48,10 @@ Experiments, in order of increasing risk:
 3. **RL** (main result) — GRPO against the proxy reward; proxy / gold /
    sycophancy curves over training steps; transfer check on SycophancyEval.
 4. **Mitigation** — delayed reward `r = (1-α)·immediate + α·delayed` for several
-   α; persona mixture if time allows.
+   α; persona mixture (70 % agreeable / 30 % truth-seeking users).
 
 The headline figure: gold vs proxy as optimization strength grows, one curve
-per α.
+per α plus the persona mixture.
 
 ## Repository layout
 
@@ -101,7 +101,7 @@ and writes a JSON with its config and outputs to `results/`.
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
 | RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
 | Tracking | Weights & Biases |
-| Compute | 1× A100 80 GB; 71 GPU-hours for everything reported |
+| Compute | 1× A100 80 GB; 77 GPU-hours for everything reported |
 
 ## Status
 
@@ -119,7 +119,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO smoke on Qwen3-1.7B: proxy and sycophancy rise within 200 steps, gold falls
 - [x] GRPO full run on Qwen3-1.7B with held-out SycophancyEval: sycophancy 49 → 98 %, held-out 62 → 85 %
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
-- [ ] Persona mixture in GRPO
+- [x] Persona mixture in GRPO, one run: sycophancy 49 → 55 % at step 300 (86–98 % with the agreeable user alone) — the α = 0.3 shape, not the α = 0.6 one
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
 - [ ] Write-up — draft in docs/WRITEUP.md, final by Nov 17
 

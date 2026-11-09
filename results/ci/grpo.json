@@ -2,6 +2,8 @@
   "runs": {
     "grpo/grpo-delayed-a0.3": {
       "alpha": 0.3,
+      "reward_kind": "delayed",
+      "series": "0.3",
       "step": 300,
       "point": {
         "gold_accuracy": 0.5433333333333333,
@@ -43,6 +45,8 @@
     },
     "grpo/grpo-delayed-a0.6": {
       "alpha": 0.6,
+      "reward_kind": "delayed",
+      "series": "0.6",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6655555555555556,
@@ -84,6 +88,8 @@
     },
     "grpo/grpo-delayed-s43-a0.3": {
       "alpha": 0.3,
+      "reward_kind": "delayed",
+      "series": "0.3",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6355555555555555,
@@ -125,6 +131,8 @@
     },
     "grpo/grpo-delayed-s43-a0.6": {
       "alpha": 0.6,
+      "reward_kind": "delayed",
+      "series": "0.6",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6633333333333333,
@@ -166,6 +174,8 @@
     },
     "grpo/grpo-delayed-s44-a0.3": {
       "alpha": 0.3,
+      "reward_kind": "delayed",
+      "series": "0.3",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6433333333333333,
@@ -207,6 +217,8 @@
     },
     "grpo/grpo-delayed-s44-a0.6": {
       "alpha": 0.6,
+      "reward_kind": "delayed",
+      "series": "0.6",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6655555555555556,
@@ -248,6 +260,8 @@
     },
     "grpo/grpo-immediate": {
       "alpha": 0.0,
+      "reward_kind": "immediate",
+      "series": "0.0",
       "step": 300,
       "point": {
         "gold_accuracy": 0.5355555555555556,
@@ -287,6 +301,8 @@
     },
     "grpo/grpo-immediate-s43": {
       "alpha": 0.0,
+      "reward_kind": "immediate",
+      "series": "0.0",
       "step": 300,
       "point": {
         "gold_accuracy": 0.59,
@@ -328,6 +344,8 @@
     },
     "grpo/grpo-immediate-s44": {
       "alpha": 0.0,
+      "reward_kind": "immediate",
+      "series": "0.0",
       "step": 300,
       "point": {
         "gold_accuracy": 0.5522222222222222,
@@ -367,8 +385,53 @@
         ]
       }
     },
+    "grpo/grpo-persona-mix": {
+      "alpha": 0.0,
+      "reward_kind": "persona_mix",
+      "series": "persona_mix",
+      "step": 300,
+      "point": {
+        "gold_accuracy": 0.6377777777777778,
+        "sycophancy_rate": 0.5533333333333333,
+        "gold_accuracy@wrong": 0.37333333333333335,
+        "gold_accuracy@none": 0.63,
+        "heldout_gold_accuracy": 0.5966666666666667,
+        "heldout_sycophancy_rate": 0.6442953020134228,
+        "proxy_mean": 8.248888888888889,
+        "informed_mean": 7.747777777777777,
+        "reward_mean": 7.927777777777778
+      },
+      "ci": {
+        "gold_accuracy": [
+          0.6058521275172717,
+          0.6685322764764938
+        ],
+        "sycophancy_rate": [
+          0.4967552375839196,
+          0.6085628454644562
+        ],
+        "gold_accuracy@wrong": [
+          0.3205246851963728,
+          0.4293448675637347
+        ],
+        "gold_accuracy@none": [
+          0.574044554842382,
+          0.682668272588034
+        ],
+        "heldout_gold_accuracy": [
+          0.5402711951944605,
+          0.6506178303307206
+        ],
+        "heldout_sycophancy_rate": [
+          0.5646867542229121,
+          0.7166505237298968
+        ]
+      }
+    },
     "grpo_first_pass/grpo-delayed-a0.3": {
       "alpha": 0.3,
+      "reward_kind": "delayed",
+      "series": "0.3",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6666666666666666,
@@ -408,6 +471,8 @@
     },
     "grpo_first_pass/grpo-delayed-a0.6": {
       "alpha": 0.6,
+      "reward_kind": "delayed",
+      "series": "0.6",
       "step": 300,
       "point": {
         "gold_accuracy": 0.6744444444444444,
@@ -630,6 +695,65 @@
         "min": 0.37,
         "max": 0.46,
         "n_runs": 4
+      }
+    },
+    "persona_mix": {
+      "runs": [
+        "grpo/grpo-persona-mix"
+      ],
+      "gold_accuracy": {
+        "mean": 0.6377777777777778,
+        "min": 0.6377777777777778,
+        "max": 0.6377777777777778,
+        "n_runs": 1
+      },
+      "gold_accuracy@none": {
+        "mean": 0.63,
+        "min": 0.63,
+        "max": 0.63,
+        "n_runs": 1
+      },
+      "gold_accuracy@wrong": {
+        "mean": 0.37333333333333335,
+        "min": 0.37333333333333335,
+        "max": 0.37333333333333335,
+        "n_runs": 1
+      },
+      "heldout_gold_accuracy": {
+        "mean": 0.5966666666666667,
+        "min": 0.5966666666666667,
+        "max": 0.5966666666666667,
+        "n_runs": 1
+      },
+      "heldout_sycophancy_rate": {
+        "mean": 0.6442953020134228,
+        "min": 0.6442953020134228,
+        "max": 0.6442953020134228,
+        "n_runs": 1
+      },
+      "informed_mean": {
+        "mean": 7.747777777777777,
+        "min": 7.747777777777777,
+        "max": 7.747777777777777,
+        "n_runs": 1
+      },
+      "proxy_mean": {
+        "mean": 8.248888888888889,
+        "min": 8.248888888888889,
+        "max": 8.248888888888889,
+        "n_runs": 1
+      },
+      "reward_mean": {
+        "mean": 7.927777777777778,
+        "min": 7.927777777777778,
+        "max": 7.927777777777778,
+        "n_runs": 1
+      },
+      "sycophancy_rate": {
+        "mean": 0.5533333333333333,
+        "min": 0.5533333333333333,
+        "max": 0.5533333333333333,
+        "n_runs": 1
       }
     }
   }

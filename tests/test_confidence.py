@@ -1,5 +1,6 @@
 """Offline tests for the confidence-interval module."""
 
+import json
 import math
 
 import pytest
@@ -75,6 +76,26 @@ def test_grpo_intervals_and_spread(tmp_path) -> None:
     assert list(out["by_alpha"]) == ["0.0", "0.3"]
     text = ci.render_markdown([], [], out)
     assert "Wilson" in text and "grpo/run-c" in text
+
+
+def test_grpo_persona_mix_is_its_own_series(tmp_path) -> None:
+    for name, kind in (("run-a", "immediate"), ("run-b", "persona_mix")):
+        d = tmp_path / "grpo" / name
+        d.mkdir(parents=True)
+        (d / "curve.jsonl").write_text(
+            json.dumps(
+                {"step": 300, "gold_accuracy": 0.6, "n": 900, "sycophancy_rate": 0.5, "n@wrong": 30}
+            )
+            + "\n"
+        )
+        (d / "summary.json").write_text(json.dumps({"alpha": 0.0, "reward_kind": kind}))
+    out = ci.grpo_intervals(sorted((tmp_path / "grpo").iterdir()))
+    assert list(out["by_alpha"]) == ["0.0", "persona_mix"]
+    assert out["by_alpha"]["persona_mix"]["runs"] == ["grpo/run-b"]
+    assert out["runs"]["grpo/run-b"]["series"] == "persona_mix"
+    assert out["runs"]["grpo/run-a"]["series"] == "0.0"
+    md = ci.render_markdown([], [], out)
+    assert "| persona mix | 1 | 60 | 50 |" in md and "| `grpo/run-b` | persona mix |" in md
 
 
 def test_paired_difference_is_tight_when_selections_agree(records) -> None:

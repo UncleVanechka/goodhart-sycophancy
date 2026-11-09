@@ -130,6 +130,13 @@ def test_summary_alpha_falls_back_to_config_reward(tmp_path: Path) -> None:
     assert plots._summary_alpha(path) == 0.6
     path.write_text(json.dumps({"config": {}}), encoding="utf-8")
     assert plots._summary_alpha(path) is None
+    explicit_null = {
+        "alpha": None,
+        "reward_kind": None,
+        "config": {"reward": {"alpha": 0.6, "kind": "delayed"}},
+    }
+    path.write_text(json.dumps(explicit_null), encoding="utf-8")
+    assert plots._summary_meta(path) == (0.6, "delayed")
 
 
 def test_load_results_missing_dir(tmp_path: Path) -> None:
@@ -235,3 +242,41 @@ def test_runs_with_the_same_alpha_are_aggregated(tmp_path: Path) -> None:
     assert agg[0][4] == 2
     _assert_png(plots.plot_goodhart_frontier([], grpo, tmp_path / "f.png"))
     _assert_png(plots.plot_grpo_curves(grpo, tmp_path / "c.png"))
+
+
+def test_persona_mix_runs_form_their_own_series(tmp_path: Path) -> None:
+    rows = [
+        {"step": s, "gold_accuracy": 0.6, "proxy_mean": 7.9, "sycophancy_rate": 0.5}
+        for s in (0, 50)
+    ]
+    immediate = [dict(r, alpha=0.0, reward_kind="immediate") for r in rows]
+    mixed = [dict(r, alpha=0.0, reward_kind="persona_mix") for r in rows]
+    grpo = {
+        "grpo-immediate": immediate,
+        "grpo-persona-mix": mixed,
+        "grpo-delayed-a0.6": [dict(r, alpha=0.6) for r in rows],
+    }
+    assert plots._group_of_run("grpo-immediate", immediate) == 0.0
+    assert plots._group_of_run("grpo-persona-mix", mixed) == "persona_mix"
+    assert plots._group_of_run("grpo-persona-mix", [{"step": 0}]) == "persona_mix"
+    cfg_rows = [{"config": {"reward": {"kind": "persona_mix", "alpha": 0.0}}}]
+    assert plots._group_of_run("x", cfg_rows) == "persona_mix"
+    groups = plots._group_runs(grpo)
+    assert list(groups) == [0.0, 0.6, "persona_mix"]
+    assert list(groups["persona_mix"]) == ["grpo-persona-mix"]
+    assert plots._group_label("persona_mix", 1) == "GRPO · persona mix"
+    assert plots._group_label(0.3, 2) == "GRPO · α=0.3 (2 runs)"
+    colors = plots._series_colors([{"curves": {"alpha=0.0": {}, "alpha=1.0": {}}}], grpo)
+    assert list(colors) == [0.0, 0.6, 1.0, "persona_mix"]
+    assert len(set(colors.values())) == 4
+    _assert_png(plots.plot_goodhart_frontier([], grpo, tmp_path / "f.png"))
+    _assert_png(plots.plot_grpo_curves(grpo, tmp_path / "c.png"))
+
+
+def test_load_results_attaches_reward_kind(tmp_path: Path) -> None:
+    run = tmp_path / "grpo" / "grpo-persona-mix"
+    run.mkdir(parents=True)
+    (run / "curve.jsonl").write_text(json.dumps({"step": 0, "gold_accuracy": 0.6}) + "\n")
+    (run / "summary.json").write_text(json.dumps({"alpha": 0.0, "reward_kind": "persona_mix"}))
+    rows = plots.load_results(tmp_path)["grpo"]["grpo-persona-mix"]
+    assert rows[0]["alpha"] == 0.0 and rows[0]["reward_kind"] == "persona_mix"

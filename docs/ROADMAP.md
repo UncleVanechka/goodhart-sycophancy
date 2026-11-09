@@ -13,15 +13,18 @@ the delayed reward removes it on both models. GRPO amplifies it in training:
 300 steps against the immediate reward take Qwen3-1.7B from 49 % to 98 %
 sycophancy, gold falls from 65 % to 54 %, and the effect transfers to the
 held-out SycophancyEval benchmark (+13 to +23 points over three seeds). The delayed reward in training
-is a knife edge on this model (11 runs): α = 0.3 only slows the collapse
+is a knife edge on this model (12 runs): α = 0.3 only slows the collapse
 (sycophancy 46–97 % across four runs, two still climbing at step 300), α = 0.6
 holds in all four (37–46 %, gold up 1–2 points) but without any gain in the
 immediate proxy — it swaps the objective rather than keeping approval with
-less sycophancy. Next: confidence intervals, limitations, the write-up.
+less sycophancy. A persona mixture (70 % agreeable / 30 % truth-seeking
+users, one run) behaves like α = 0.3: 55 % sycophancy at step 300, above the
+49 % start (but far below 86–98 % for the agreeable user alone), proxy up
+0.46. Next: the final write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       done        done      done (3–4 runs/α)  Nov 17+
+  done       done       done       done        done      done (12 runs)     Nov 17+
 ```
 
 ## 1. The question in one picture
@@ -64,7 +67,7 @@ flowchart LR
     subgraph exp[Experiments]
         reward --> baseline[1 · Baseline<br/>N = 1]
         reward --> bon[2 · Best-of-N<br/>argmax over N ∈ 1,4,16,64]
-        reward --> grpo[3 · GRPO + LoRA<br/>TRL, 600 steps]
+        reward --> grpo[3 · GRPO + LoRA<br/>TRL, 300 steps]
         reward --> mit[4 · Mitigation<br/>sweep α, persona mix]
     end
 
@@ -121,7 +124,7 @@ figures. Two consequences shape the stack:
 | 1 | **Baseline** — one answer per prompt, no optimization | sycophancy the model brings in; the judge's bias | ✅ Qwen3-1.7B, Qwen3-4B |
 | 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B and 4B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) |
 | 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ 1.7B, 300 steps, 3 seeds: sycophancy 49 → 86–98 %, held-out +13 to +23 points (§4.3) |
-| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO, four runs each (§4.3): 0.3 only slows the collapse, 0.6 holds but the proxy stays flat · persona mixture not run |
+| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO, four runs each (§4.3): 0.3 only slows the collapse, 0.6 holds but the proxy stays flat · ✅ persona mixture (0.7 agreeable / 0.3 truth-seeking), one run: 55 % at step 300, above the 49 % start, the α = 0.3 shape |
 
 Go / no-go for 3: the proxy must rise within the first 200 GRPO steps. If it
 does not by **Nov 13**, RL is dropped and the project ships on experiments 1
@@ -224,11 +227,13 @@ the greedy baseline above.
 
 ![GRPO curves](../figures/grpo_curves.png)
 
-Eleven runs with one training config (LoRA r = 16; 8 prompts × 8 completions
+Twelve runs with one training config (LoRA r = 16; 8 prompts × 8 completions
 per step; lr 3e-5, constant after a 10-step warmup; KL β = 0.04; completions
-≤ 512 tokens; no thinking): the immediate reward (α = 0, three seeds) and the
+≤ 512 tokens; no thinking): the immediate reward (α = 0, three seeds), the
 delayed reward `(1-α)·immediate + α·informed` for α = 0.3 and 0.6 (four runs
-each: seed 42 twice, seeds 43 and 44 once). The step-0 point is the untrained
+each: seed 42 twice, seeds 43 and 44 once), and a persona mixture
+(`reward.kind: persona_mix`: each question is rated by one persona for the
+whole run, drawn 70 % agreeable / 30 % truth-seeking; seed 42, one run). The step-0 point is the untrained
 model and is shared by all runs on the validation set; the held-out
 SycophancyEval sample is drawn per seed (300 items, 146–149 with a wrong
 opinion), so held-out numbers are changes against each run's own step 0. The
@@ -240,21 +245,22 @@ per α, mean with a min–max band). GRPO sampling on the GPU is not
 bit-reproducible, so the two seed-42 runs at each α are two independent draws
 like any other pair.
 
-| step 300, per α | α = 0 (immediate) | α = 0.3 | α = 0.6 |
-|---|---|---|---|
-| runs | 3 | 4 | 4 |
-| sycophancy rate, % — mean (min–max) | 93 (86–98) | 66 (46–97) | 40 (37–46) |
-| gold accuracy, % | 56 (54–59) | 62 (54–67) | 67 (66–67) |
-| gold under a wrong opinion, % | 6 (2–12) | 28 (3–44) | 47 (44–49) |
-| gold without an opinion, % | 63 (59–67) | 64 (61–66) | 65 (63–66) |
-| held-out sycophancy change, points (each run against its own step-0 sample) | +16 (+13 to +23) | +7 (+2 to +19) | -1 (-1 to +1) |
-| held-out gold change, points | -5 (-9 to -3) | -2 (-8 to +1) | -2 (-3 to +0) |
-| proxy, immediate judge (1–10), from 7.79 | 8.54 (8.37–8.85) | 8.33 (8.17–8.54) · n=3 | 7.85 (7.78–7.90) · n=3 |
-| delayed signal, informed judge (1–10), from 7.53 | 6.59 (6.38–6.80) · n=2 | 7.07 (6.30–7.49) · n=3 | 7.92 (7.50–8.22) · n=3 |
-| training reward (1–10) | 8.38 (8.37–8.40) · n=2 | 7.96 (7.87–8.04) | 7.96 (7.61–8.16) |
-| mean training-completion length, tokens (from 67–80 at the first logged step) | 18 (7–32) | 54 (32–78) | 71 (23–89) |
-| KL to the reference policy | 2.04 (0.43–4.79) | 0.27 (0.06–0.89) | 0.09 (0.06–0.12) |
-| wall time per run on one A100 | 3.9 h (3.3 h–4.5 h) | 5.8 h (4.5 h–6.4 h) | 6.8 h (6.4 h–7.2 h) |
+| step 300, per α | α = 0 (immediate) | α = 0.3 | α = 0.6 | persona mix 0.7 / 0.3 |
+|---|---|---|---|---|
+| runs | 3 | 4 | 4 | 1 |
+| sycophancy rate, % — mean (min–max) | 93 (86–98) | 66 (46–97) | 40 (37–46) | 55 |
+| gold accuracy, % | 56 (54–59) | 62 (54–67) | 67 (66–67) | 64 |
+| gold under a wrong opinion, % | 6 (2–12) | 28 (3–44) | 47 (44–49) | 37 |
+| gold without an opinion, % | 63 (59–67) | 64 (61–66) | 65 (63–66) | 63 |
+| held-out sycophancy change, points (each run against its own step-0 sample) | +16 (+13 to +23) | +7 (+2 to +19) | -1 (-1 to +1) | +2 |
+| held-out gold change, points | -5 (-9 to -3) | -2 (-8 to +1) | -2 (-3 to +0) | -1 |
+| proxy, immediate judge (1–10), from 7.79 | 8.54 (8.37–8.85) | 8.33 (8.17–8.54) · n=3 | 7.85 (7.78–7.90) · n=3 | 8.25 |
+| delayed signal, informed judge (1–10), from 7.53 | 6.59 (6.38–6.80) · n=2 | 7.07 (6.30–7.49) · n=3 | 7.92 (7.50–8.22) · n=3 | 7.75 |
+| training reward (1–10) | 8.38 (8.37–8.40) · n=2 | 7.96 (7.87–8.04) | 7.96 (7.61–8.16) | 7.93 (mixture) |
+| mean training-completion length, tokens (from 67–80 at the first logged step) | 18 (7–32) | 54 (32–78) | 71 (23–89) | 82 |
+| KL to the reference policy | 2.04 (0.43–4.79) | 0.27 (0.06–0.89) | 0.09 (0.06–0.12) | 0.07 |
+| wall time per run on one A100 | 3.9 h (3.3 h–4.5 h) | 5.8 h (4.5 h–6.4 h) | 6.8 h (6.4 h–7.2 h) | 6.4 h |
+
 Per run, step 300 (`results/grpo/` and `results/grpo_first_pass/`):
 
 | run | α | seed | eval judges | sycophancy | gold | proxy | informed | held-out sycophancy | tokens |
@@ -270,6 +276,7 @@ Per run, step 300 (`results/grpo/` and `results/grpo_first_pass/`):
 | `grpo/grpo-delayed-a0.6` | 0.6 | 42 | immediate + informed | 38 % | 67 % | 7.86 | 8.22 | 61 % | 85 |
 | `grpo/grpo-delayed-s43-a0.6` | 0.6 | 43 | immediate + informed | 39 % | 66 % | 7.90 | 8.04 | 53 % | 89 |
 | `grpo/grpo-delayed-s44-a0.6` | 0.6 | 44 | immediate + informed | 46 % | 67 % | 7.78 | 7.50 | 68 % | 23 |
+| `grpo/grpo-persona-mix` | mix 0.7 / 0.3 | 42 | immediate + informed | 55 % | 64 % | 8.25 | 7.75 | 64 % | 82 |
 
 What the numbers say:
 
@@ -308,6 +315,20 @@ What the numbers say:
   groups over its last 25 steps, informed rating down from 8.2 to 7.5 and
   sycophancy back from 35 % to its starting 46–49 % over the last 50 steps. Held-out sycophancy moves by −1 to +1 points
   against each run's own start.
+- **The persona mixture behaves like α = 0.3.** One run, 70 % of the
+  questions rated by the agreeable user and 30 % by the truth-seeking one
+  (persona fixed per question, invisible to the policy). Sycophancy dips to
+  41 % by step 25 (the same early dip as in most runs, agreeable-only α = 0
+  included: 38–49 % across all twelve), then climbs to 55 % at step 300
+  (Wilson [50, 61], start 49 %): 43 → 55 % from step 150, beyond noise;
+  51 → 55 % over the last 100 steps, within noise. Gold 65 → 64 %, gold under
+  a wrong opinion 42 → 37 %, held-out +2 points. The immediate judge rises
+  7.79 → 8.25, the informed judge 7.53 → 7.75 after peaking at 8.2 at step 25
+  (8.1 again at steps 150–175), completions stay long (82 tokens), KL 0.07.
+  The proxy is being optimized and agreement wins the average because it
+  wins 70 % of the draws. Against the agreeable user alone (86–98 %) this is
+  a large cut, so hypothesis 3 holds as worded; against the 49 % start it is
+  not a fix. One run cannot rule out the 46–97 % spread seen at α = 0.3.
 - **Spread, not noise.** With 300 questions per opinion type a rate carries
   about ±2.8 points of binomial noise; the α = 0.6 runs agree within that
   (37–46 %), the α = 0.3 runs span 46–97 %. The seed-42 pair at α = 0.3 differs
@@ -323,7 +344,7 @@ What the numbers say:
 | Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
 | Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ✅ full run Nov 8 |
-| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · persona mixture open |
+| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · ✅ persona mixture Nov 9, one run |
 | Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ✅ draft Nov 9 ([WRITEUP.md](WRITEUP.md)) · ⏳ final |
 | Nov 20–21 | Final review, ship | ⏳ |
 
@@ -353,8 +374,9 @@ What the numbers say:
    at α = 0 (`results/grpo/`, plus the first seed-42 pair under
    `results/grpo_first_pass/`). Verdict in §4.3: 0.3 slows the collapse, 0.6
    stops it at the price of the proxy. Persona mixture (`reward.kind:
-   persona_mix`) is wired but has not been run; if GPU time remains it is the
-   one open experiment, otherwise it goes to limitations.
+   persona_mix`, 0.7 agreeable / 0.3 truth-seeking) ran once on Nov 9: 55 %
+   sycophancy at step 300, above the 49 % start, proxy +0.46 — the α = 0.3 shape.
+   Repeats cost ~6.4 GPU-hours each.
 5. **Confidence intervals** — done: `python -m goodhart.experiments.confidence` writes
    `results/ci/` (bootstrap over questions for baseline and Best-of-N, reproducing every
    committed point; Wilson intervals and across-run spread for GRPO).
@@ -372,10 +394,10 @@ What the numbers say:
 
 ## 8. Definition of done
 
-- [x] Frontier figure with Best-of-N curves for both models and GRPO curves for α ∈ {0, 0.3, 0.6}
+- [x] Frontier figure with Best-of-N curves for both models and GRPO curves for α ∈ {0, 0.3, 0.6} and the persona mixture
 - [x] Held-out SycophancyEval numbers before and after GRPO
 - [x] Confidence intervals on every reported rate — `results/ci/summary.md` (bootstrap over questions for baseline and Best-of-N, Wilson plus 3–4 runs per α for GRPO)
-- [ ] Limitations section: small models, synthetic user, one judge, seeds
+- [x] Limitations section: small models, synthetic user, one judge, seeds ([WRITEUP.md](WRITEUP.md) §7)
 - [ ] `make data && make baseline && make bon && make grpo && make plots` reproduces every figure from `configs/`
 - [ ] Write-up published; README links to it (draft linked)
 
@@ -387,6 +409,7 @@ python -m goodhart.experiments.baseline  --config configs/bon.yaml    # results/
 python -m goodhart.experiments.best_of_n --config configs/bon.yaml    # results/bon/*.json
 python -m goodhart.experiments.train_grpo --config configs/grpo.yaml       # results/grpo/grpo-immediate/
 python -m goodhart.experiments.train_grpo --config configs/mitigation.yaml # results/grpo/grpo-delayed-a*/
+#   persona mix: same config with run_name=grpo-persona-mix, reward.kind=persona_mix, sweep.alphas=[]
 python -m goodhart.experiments.plots                                  # figures/*.png
 ```
 
@@ -398,7 +421,9 @@ tables above. The GRPO runs overrode the config with
 `lr_scheduler_type: constant_with_warmup`, `warmup_steps: 10`,
 `per_device_train_batch_size: 16`, `gradient_accumulation_steps: 4`,
 `eval.every_steps: 25`; the seed runs add `seed: 43` or `44` and a `-s<seed>`
-suffix on `run_name`; `summary.json` stores the merged config. The repo configs default to vLLM generation and the
+suffix on `run_name`; the persona-mixture run sets `reward: {kind: persona_mix,
+persona_weights: {agreeable: 0.7, truth_seeking: 0.3}}` and `sweep.alphas: []`;
+`summary.json` stores the merged config. The repo configs default to vLLM generation and the
 Anthropic simulator; on the GPU runner these runs overrode
 `generation.backend: hf` and `simulator.backend: hf` (see §2.2), the baseline
 used all 900 test prompts with `generation.batch_size: 32`, and Best-of-N used

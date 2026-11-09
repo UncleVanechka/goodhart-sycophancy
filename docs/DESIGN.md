@@ -214,7 +214,7 @@ explicit (`download(path)`), never implicit at import time.
 Reads every JSON under `results/` and writes to `figures/`:
 
 - `bon_curves.png` — proxy, gold, sycophancy vs log₂N, one line per model.
-- `goodhart_frontier.png` — **headline**: gold (y) vs proxy (x), one curve per α,
+- `goodhart_frontier.png` — **headline**: gold (y) vs proxy (x), one curve per α plus the persona mixture,
   points labelled with N or step.
 - `grpo_curves.png` — proxy / gold / sycophancy / held-out sycophancy vs step,
   one line per run.

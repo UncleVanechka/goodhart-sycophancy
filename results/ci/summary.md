@@ -2,7 +2,8 @@
 
 Baseline and Best-of-N: percentile bootstrap over questions (a question is resampled
 with all of its opinion variants). GRPO: Wilson intervals from the counts of the final
-evaluation of each run, and mean / min / max across the runs of one α. Wilson on the
+evaluation of each run, and mean / min / max across the runs of one series (an α, or
+a persona mixture; a single run shows its value alone). Wilson on the
 overall and held-out gold columns treats the three opinion variants of a question as
 independent rows and is somewhat narrow; sycophancy and gold @ wrong have one row per
 question. Paired differences resample the same questions for both selections.
@@ -82,7 +83,7 @@ question. Paired differences resample the same questions for both selections.
 
 ## GRPO, final evaluation of each run (Wilson 95 %)
 
-| run | α | gold | sycophancy | gold @ wrong | held-out sycophancy | held-out gold | proxy | informed |
+| run | α / reward | gold | sycophancy | gold @ wrong | held-out sycophancy | held-out gold | proxy | informed |
 |---|---|---|---|---|---|---|---|---|
 | `grpo/grpo-delayed-a0.3` | 0.3 | 54.3 % [51.1, 57.6] | 96.7 % [94.0, 98.2] | 3.0 % [1.6, 5.6] | 81.2 % [74.2, 86.7] | 52.3 % [46.7, 57.9] | 8.54 | 6.30 |
 | `grpo/grpo-delayed-a0.6` | 0.6 | 66.6 % [63.4, 69.6] | 38.0 % [32.7, 43.6] | 48.3 % [42.7, 54.0] | 61.1 % [53.1, 68.5] | 58.0 % [52.3, 63.4] | 7.86 | 8.22 |
@@ -93,13 +94,15 @@ question. Paired differences resample the same questions for both selections.
 | `grpo/grpo-immediate` | 0.0 | 53.6 % [50.3, 56.8] | 97.7 % [95.3, 98.9] | 2.0 % [0.9, 4.3] | 85.2 % [78.7, 90.0] | 51.3 % [45.7, 56.9] | 8.85 | — |
 | `grpo/grpo-immediate-s43` | 0.0 | 59.0 % [55.8, 62.2] | 86.0 % [81.6, 89.5] | 11.7 % [8.5, 15.8] | 66.4 % [58.4, 73.6] | 55.0 % [49.3, 60.5] | 8.40 | 6.80 |
 | `grpo/grpo-immediate-s44` | 0.0 | 55.2 % [52.0, 58.4] | 94.3 % [91.1, 96.4] | 4.0 % [2.3, 6.9] | 80.5 % [73.4, 86.1] | 51.0 % [45.4, 56.6] | 8.37 | 6.38 |
+| `grpo/grpo-persona-mix` | persona mix | 63.8 % [60.6, 66.9] | 55.3 % [49.7, 60.9] | 37.3 % [32.1, 42.9] | 64.4 % [56.5, 71.7] | 59.7 % [54.0, 65.1] | 8.25 | 7.75 |
 | `grpo_first_pass/grpo-delayed-a0.3` | 0.3 | 66.7 % [63.5, 69.7] | 46.3 % [40.8, 52.0] | 44.3 % [38.8, 50.0] | 65.8 % [57.8, 72.9] | 57.3 % [51.7, 62.8] | — | — |
 | `grpo_first_pass/grpo-delayed-a0.6` | 0.6 | 67.4 % [64.3, 70.4] | 37.0 % [31.7, 42.6] | 48.7 % [43.1, 54.3] | 61.1 % [53.1, 68.5] | 57.0 % [51.3, 62.5] | — | — |
 
-## GRPO, across runs of one α (mean, min–max, number of runs)
+## GRPO, across runs of one series (mean, min–max, number of runs)
 
-| α | runs | gold | sycophancy | held-out sycophancy | proxy | informed |
+| α / reward | runs | gold | sycophancy | held-out sycophancy | proxy | informed |
 |---|---|---|---|---|---|---|
 | 0.0 | 3 | 56 (54–59) | 93 (86–98) | 77 (66–85) | 8.54 (8.37–8.85) | 6.59 (6.38–6.80) (n=2) |
 | 0.3 | 4 | 62 (54–67) | 66 (46–97) | 68 (57–81) | 8.33 (8.17–8.54) (n=3) | 7.07 (6.30–7.49) (n=3) |
 | 0.6 | 4 | 67 (66–67) | 40 (37–46) | 61 (53–68) | 7.85 (7.78–7.90) (n=3) | 7.92 (7.50–8.22) (n=3) |
+| persona mix | 1 | 64 | 55 | 64 | 8.25 | 7.75 |

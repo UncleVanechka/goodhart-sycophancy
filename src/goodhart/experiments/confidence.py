@@ -4,7 +4,7 @@ Baseline and Best-of-N keep per-item files (one row per response), so their rate
 percentile bootstrap over *questions*: a ``base_id`` is resampled with all of its opinion
 variants, which keeps the paired structure that ``flip_rate`` relies on. GRPO curves keep only
 aggregates, so each run's step-300 rates get a Wilson interval from the counts, and the runs
-of one α are summarised by mean, min and max.
+of one series (an α, or a persona mixture) are summarised by mean, min and max.
 
 CLI::
 
@@ -277,8 +277,31 @@ def _close(point: dict[str, float], summary: dict[str, float], tol: float = 1e-9
     )
 
 
+def _series_of(summary: dict[str, Any]) -> str:
+    """Series of a run in the spread table: ``persona_mix`` for a persona mixture, else its α."""
+    reward = (summary.get("config") or {}).get("reward") or {}
+    kind = summary.get("reward_kind") or (reward.get("kind") if isinstance(reward, dict) else None)
+    return "persona_mix" if kind == "persona_mix" else str(summary.get("alpha"))
+
+
+def _series_order(series: str) -> tuple[int, float, str]:
+    try:
+        return (0, float(series), "")
+    except ValueError:
+        return (1, 0.0, series)
+
+
+def series_label(series: str) -> str:
+    """Series as written in the report: ``0.3`` stays ``0.3``, ``persona_mix`` → ``persona mix``."""
+    return "persona mix" if series == "persona_mix" else series
+
+
 def grpo_intervals(run_dirs: Sequence[Path]) -> dict[str, Any]:
-    """Wilson intervals for the final evaluation of every GRPO run, plus per-α spread."""
+    """Wilson intervals for the final evaluation of every GRPO run, plus per-series spread.
+
+    A series is an α of the delayed reward, or ``persona_mix`` for runs trained on a persona
+    mixture (their ``alpha`` field is 0 but means nothing); ``by_alpha`` is keyed by series.
+    """
     runs: dict[str, Any] = {}
     for run_dir in run_dirs:
         curve = read_jsonl(run_dir / "curve.jsonl")
@@ -296,6 +319,8 @@ def grpo_intervals(run_dirs: Sequence[Path]) -> dict[str, Any]:
         }
         entry: dict[str, Any] = {
             "alpha": summary.get("alpha"),
+            "reward_kind": summary.get("reward_kind"),
+            "series": _series_of(summary),
             "step": last.get("step"),
             "point": {},
             "ci": {},
@@ -311,9 +336,9 @@ def grpo_intervals(run_dirs: Sequence[Path]) -> dict[str, Any]:
         runs[f"{run_dir.parent.name}/{run_dir.name}"] = entry
     by_alpha: dict[str, Any] = {}
     for name, entry in runs.items():
-        by_alpha.setdefault(str(entry["alpha"]), []).append(name)
+        by_alpha.setdefault(entry["series"], []).append(name)
     spread: dict[str, Any] = {}
-    for alpha, names in sorted(by_alpha.items(), key=lambda kv: float(kv[0])):
+    for alpha, names in sorted(by_alpha.items(), key=lambda kv: _series_order(kv[0])):
         keys = sorted({k for n in names for k in runs[n]["point"]})
         spread[alpha] = {"runs": names}
         for key in keys:
@@ -346,6 +371,8 @@ def _spread_cell(spread: dict[str, Any], key: str, pct: bool) -> str:
     v = spread[key]
     fmt = (lambda x: f"{100 * x:.0f}") if pct else (lambda x: f"{x:.2f}")
     tag = f" (n={v['n_runs']})" if v["n_runs"] != len(spread["runs"]) else ""
+    if v["n_runs"] == 1:
+        return f"{fmt(v['mean'])}{tag}"
     return f"{fmt(v['mean'])} ({fmt(v['min'])}–{fmt(v['max'])}){tag}"
 
 
@@ -382,7 +409,8 @@ def render_markdown(baseline: list[dict], bon: list[dict], grpo: dict[str, Any])
     lines += [
         "Baseline and Best-of-N: percentile bootstrap over questions (a question is resampled",
         "with all of its opinion variants). GRPO: Wilson intervals from the counts of the final",
-        "evaluation of each run, and mean / min / max across the runs of one α. Wilson on the",
+        "evaluation of each run, and mean / min / max across the runs of one series (an α, or",
+        "a persona mixture; a single run shows its value alone). Wilson on the",
         "overall and held-out gold columns treats the three opinion variants of a question as",
         "independent rows and is somewhat narrow; sycophancy and gold @ wrong have one row per",
         "question. Paired differences resample the same questions for both selections.",
@@ -439,20 +467,22 @@ def render_markdown(baseline: list[dict], bon: list[dict], grpo: dict[str, Any])
         )
         lines += ["## GRPO, final evaluation of each run (Wilson 95 %)", ""]
         lines += [
-            "| run | α | gold | sycophancy | gold @ wrong | held-out sycophancy "
+            "| run | α / reward | gold | sycophancy | gold @ wrong | held-out sycophancy "
             "| held-out gold | proxy | informed |",
             "|---|---|---|---|---|---|---|---|---|",
         ]
         for name, e in grpo["runs"].items():
-            lines.append(f"| `{name}` | {e['alpha']} | {_rate_cells(e['point'], e['ci'], keys)} |")
-        lines += ["", "## GRPO, across runs of one α (mean, min–max, number of runs)", ""]
+            series = series_label(e.get("series", str(e["alpha"])))
+            lines.append(f"| `{name}` | {series} | {_rate_cells(e['point'], e['ci'], keys)} |")
+        lines += ["", "## GRPO, across runs of one series (mean, min–max, number of runs)", ""]
         lines += [
-            "| α | runs | gold | sycophancy | held-out sycophancy | proxy | informed |",
+            "| α / reward | runs | gold | sycophancy | held-out sycophancy | proxy | informed |",
             "|---|---|---|---|---|---|---|",
         ]
         for alpha, s in grpo["by_alpha"].items():
             lines.append(
-                f"| {alpha} | {len(s['runs'])} | {_spread_cell(s, 'gold_accuracy', True)} | "
+                f"| {series_label(alpha)} | {len(s['runs'])} | "
+                f"{_spread_cell(s, 'gold_accuracy', True)} | "
                 f"{_spread_cell(s, 'sycophancy_rate', True)} | "
                 f"{_spread_cell(s, 'heldout_sycophancy_rate', True)} | "
                 f"{_spread_cell(s, 'proxy_mean', False)} | "

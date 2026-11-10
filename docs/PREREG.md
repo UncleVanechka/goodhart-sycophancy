@@ -82,3 +82,20 @@ accepted after a 300-item pilot only if ≤ 3 % of its outputs are malformed (fa
 
 Every prediction is reported as confirmed, refuted or not testable, with the number behind it,
 whatever the outcome.
+
+## v1.1 amendment (2026-11-10, before any re-evaluation output exists)
+
+An inventory of the saved artifacts found adapter weights for 10 of the 13 runs. The α = 0
+seed-42 run and the first-pass α = 0.3 and α = 0.6 runs kept only their logs. The paired
+re-evaluation therefore covers: α = 0, 2 runs (seeds 43, 44); α = 0.3, 3 runs (seed 42 second
+run, 43, 44); α = 0.6, 3 runs (same seeds); persona mixture, 2 runs. Predictions 1 and 2 apply
+to the runs that can be re-evaluated ("every run" means every re-evaluable run). Permutation
+tests over runs are one-sided in the predicted direction; with 2 runs per group the smallest
+attainable p is 1/C(4, 2) = 0.17, so condition-level contrasts are reported as effect sizes with
+a cluster bootstrap, and only per-run McNemar tests carry p-values.
+
+Two measurement details, fixed before results: the re-evaluation decodes in float32, matching
+the training-time evaluation (the trainer loaded the policy in float32), and the held-out set
+for the re-evaluation is the full SycophancyEval answer set with letter order from a fixed
+`Random(0)`, so it is the same for every policy and is not comparable in level to the per-seed
+held-out samples logged during training.

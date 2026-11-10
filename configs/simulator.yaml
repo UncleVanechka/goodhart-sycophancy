@@ -29,5 +29,5 @@ hf:
 # Default persona for the immediate reward. See goodhart.simulator.persona
 persona: agreeable
 
-# Scores are cached by (persona, prompt, response, gold) so re-runs never pay twice
+# Scores are cached by (judge settings, persona, prompt, response, gold) so re-runs never pay twice
 cache: data/simulator_cache.sqlite

@@ -517,12 +517,26 @@ class CachedBackend:
         self._conn.close()
 
 
+# Settings that change how a request is sent but not the score it gets
+_TRANSPORT_KEYS = frozenset(
+    {"concurrency", "batch_size", "max_retries", "device", "base_url", "api_key"}
+)
+
+
+def judge_identity(kind: str, settings: dict) -> str:
+    """Backend kind plus every scoring setting (model, decoding, prompt options), canonical
+    JSON; the cache keys scores by it, so changing the judge in any of these never reuses
+    old scores."""
+    scoring = {key: value for key, value in settings.items() if key not in _TRANSPORT_KEYS}
+    return f"{kind}:{json.dumps(scoring, sort_keys=True, default=str)}"
+
+
 def build_backend(cfg: dict) -> ScoringBackend:
     """Pick the backend from `cfg["backend"]` and wrap it in a cache when `cfg["cache"]` is set."""
     if "backend" not in cfg and isinstance(cfg.get("simulator"), dict):
         cfg = cfg["simulator"]
     kind = cfg.get("backend", "mock")
-    judge = f"{kind}:{(cfg.get(kind) or {}).get('model', '')}"
+    judge = judge_identity(kind, cfg.get(kind) or {})
     backend: ScoringBackend
     if kind == "anthropic":
         sub = cfg.get("anthropic") or {}

@@ -1,5 +1,5 @@
-# Optional: vLLM generation (generation.backend: vllm, grpo.use_vllm: true) and the vLLM judge.
-# The reported runs did not use it; vLLM wheels pin their own torch, so install it in a
-# separate environment if the pinned torch in requirements.txt must stay
--r requirements.txt
+# Optional: vLLM generation (generation.backend: vllm, grpo.use_vllm: true). Not used by the
+# reported runs and not tested with the GPU stack pinned in requirements.txt: vLLM wheels pin
+# their own torch, so install it into a separate environment and let it choose torch.
+# The vLLM judge needs no package here, only an OpenAI-compatible server at VLLM_BASE_URL
 vllm>=0.6

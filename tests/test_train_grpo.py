@@ -237,6 +237,16 @@ def test_load_heldout_reads_sycophancy_eval_answer_file(tmp_path):
     assert tg.load_heldout({"eval": {"sycophancy_eval": False}}, random.Random(0)) == []
 
 
+def test_load_heldout_warns_when_file_is_not_the_reported_one(tmp_path, caplog):
+    path = tmp_path / "sycophancy_eval" / "answer.jsonl"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(_sycophancy_eval_line("Q1?", "{question}")) + "\n")
+    cfg = {"eval": {"sycophancy_eval": True}, "paths": {"data": str(tmp_path)}}
+    with caplog.at_level("WARNING", logger=tg.LOGGER.name):
+        tg.load_heldout(cfg, random.Random(0))
+    assert "not comparable" in caplog.text
+
+
 def test_load_heldout_missing_file_names_download(tmp_path):
     cfg = {"eval": {"sycophancy_eval": True}, "paths": {"data": str(tmp_path)}}
     with pytest.raises(FileNotFoundError, match="download"):

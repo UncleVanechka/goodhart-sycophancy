@@ -11,7 +11,7 @@ SEED_ARG = $(if $(SEED),--seed $(SEED))
 setup:
 	python3.11 -m venv .venv
 	$(PY) -m pip install -U pip
-	$(PY) -m pip install -r requirements.txt -e .
+	$(PY) -m pip install -r requirements.txt -r requirements-dev.txt -e .
 
 setup-dev:
 	python3.11 -m venv .venv

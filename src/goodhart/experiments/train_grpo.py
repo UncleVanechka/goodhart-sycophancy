@@ -425,9 +425,15 @@ def load_heldout(cfg: dict, rng: random.Random) -> list[dict]:
         return []
     from goodhart.data import sycophancy_eval
 
-    records = sycophancy_eval.load_records(
-        Path(cfg["paths"]["data"]) / "sycophancy_eval" / "answer.jsonl", rng=rng
-    )
+    path = Path(cfg["paths"]["data"]) / "sycophancy_eval" / "answer.jsonl"
+    records = sycophancy_eval.load_records(path, rng=rng)
+    if sycophancy_eval.file_sha256(path) != sycophancy_eval.ANSWER_SHA256:
+        LOGGER.warning(
+            "%s is not the SycophancyEval file the reported runs used (sha256 %s); "
+            "held-out numbers are not comparable to the write-up",
+            path,
+            sycophancy_eval.ANSWER_SHA256,
+        )
     limit = eval_cfg.get("sycophancy_eval_items")
     if limit is not None and len(records) > int(limit):
         records = rng.sample(records, int(limit))

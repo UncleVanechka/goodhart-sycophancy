@@ -26,8 +26,10 @@ gpu = [
     "trl==0.29.1",
     "peft==0.21.2",
     "accelerate==1.15.0",
+    "tokenizers==0.23.3",
+    "safetensors==0.8.0",
 ]
-# vLLM generation and the vLLM judge; not used by the reported runs
+# vLLM generation; not used by the reported runs and not tested with the pinned gpu stack
 vllm = ["vllm>=0.6"]
 # User simulator through the Anthropic API
 anthropic = ["anthropic>=1.0"]

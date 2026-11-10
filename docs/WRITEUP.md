@@ -254,8 +254,8 @@ make plots      # figures/*.png
 ```
 
 The configs in `configs/` are those of the reported runs (local Qwen2.5-7B-Instruct judge,
-`transformers` generation), and `requirements.txt` pins the library versions they ran on; a
-test checks the configs against the one stored in every result file. `make grpo-all` does not
+`transformers` generation), and `requirements.txt` pins the GPU stack they ran on; a test
+checks the configs against the one stored in every reported result. `make grpo-all` does not
 rerun the first-pass α = 0.3 / 0.6 pair, and GRPO sampling on the GPU is not
 bit-reproducible, so a rerun reproduces the spread across seeds rather than each run to the
 digit.

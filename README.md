@@ -89,8 +89,9 @@ make plots                       # figures/*.png
 
 The configs in `configs/` are the ones the reported runs used, and `requirements.txt` pins
 the GPU stack they ran on (torch 2.6.0, transformers 5.20.2, TRL 0.29.1, PEFT 0.21.2).
-`tests/test_reported_configs.py` rebuilds the stage config of every committed result from
-`configs/` and compares it with the stored one; results keep only the path of the judge
+`tests/test_reported_configs.py` rebuilds the stage config of every result under
+`results/baseline`, `bon`, `grpo` and `grpo_first_pass` from `configs/` and compares it with
+the stored one (`grpo_smoke/` holds the smoke runs, which used other settings); results keep only the path of the judge
 config, so the judge settings are pinned to the write-up's (local Qwen2.5-7B-Instruct)
 separately. `make data` rebuilds the exact `data/prompts.jsonl` the runs used and fetches
 SycophancyEval from a fixed upstream commit, checked by sha256. `make grpo-all` reruns 11 of
@@ -102,7 +103,7 @@ One target at a time: `make grpo` (α = 0), `make grpo-mitigation` (α = 0.3 and
 call) or `make grpo-persona-mix`, with `SEED=43` for another seed. Other judges: `backend:
 anthropic` in `configs/simulator.yaml` with `ANTHROPIC_API_KEY` in `.env` (`cp .env.example
 .env`), or `backend: vllm` with an OpenAI-compatible server at `VLLM_BASE_URL`; the score
-cache is keyed by judge, so switching never reuses another judge's scores. vLLM generation
+cache is keyed by the judge and its scoring settings, so switching never reuses old scores. vLLM generation
 (`requirements-vllm.txt`) is `generation.backend: vllm` in the Best-of-N and baseline configs
 and `grpo.use_vllm: true` in the GRPO ones. W&B logging is `wandb.mode` in
 `configs/base.yaml`.

@@ -57,20 +57,34 @@ def download(
     """Fetch the upstream JSONL to ``path`` with urllib; skip when it already exists.
 
     The file is checked against ``sha256``, which defaults to :data:`ANSWER_SHA256` for the
-    pinned :data:`ANSWER_URL`; a mismatch raises instead of loading a different held-out set.
+    pinned :data:`ANSWER_URL`. A downloaded payload that does not match is never written; an
+    existing file that does not match raises with a hint to download again.
     """
     expected = sha256 if sha256 is not None else (ANSWER_SHA256 if url == ANSWER_URL else None)
     target = Path(path)
-    if not target.is_file() or force:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(url, timeout=60) as response:
-            payload = response.read()
-        target.write_bytes(payload)
-    if expected is not None:
-        actual = hashlib.sha256(target.read_bytes()).hexdigest()
-        if actual != expected:
-            raise ValueError(f"{target}: sha256 {actual}, expected {expected}")
+    if target.is_file() and not force:
+        actual = file_sha256(target)
+        if expected is not None and actual != expected:
+            raise ValueError(
+                f"{target}: sha256 {actual}, expected {expected}; "
+                "run `python -m goodhart.data.sycophancy_eval --force`"
+            )
+        return target
+    with urllib.request.urlopen(url, timeout=60) as response:
+        payload = response.read()
+    actual = hashlib.sha256(payload).hexdigest()
+    if expected is not None and actual != expected:
+        raise ValueError(f"{url}: sha256 {actual}, expected {expected}; nothing written")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_name(target.name + ".part")
+    partial.write_bytes(payload)
+    partial.replace(target)
     return target
+
+
+def file_sha256(path: str | Path) -> str:
+    """sha256 of a file's bytes, hex."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def _human_text(obj: dict) -> str:

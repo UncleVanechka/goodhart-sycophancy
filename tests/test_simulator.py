@@ -361,6 +361,22 @@ def test_cache_key_depends_on_judge_and_persona_prompt():
     assert cache_key(a, "pr", "", "A") != cache_key(a, "p", "r", "A")
 
 
+def test_judge_identity_tracks_scoring_settings_only():
+    from goodhart.simulator.backend import judge_identity
+
+    base = {"model": "m", "effort": "low", "max_tokens": 256, "concurrency": 8}
+    assert judge_identity("anthropic", base) != judge_identity("vllm", base)
+    assert judge_identity("anthropic", base) != judge_identity(
+        "anthropic", {**base, "effort": "high"}
+    )
+    assert judge_identity("anthropic", base) == judge_identity(
+        "anthropic", {**base, "concurrency": 32, "max_retries": 9}
+    )
+    assert judge_identity("hf", {"model": "m", "batch_size": 16}) == judge_identity(
+        "hf", {"batch_size": 4, "model": "m"}
+    )
+
+
 def test_cached_backend_does_not_share_scores_across_judges(tmp_path, records):
     path = tmp_path / "scores.sqlite"
     persona = get_persona("agreeable")

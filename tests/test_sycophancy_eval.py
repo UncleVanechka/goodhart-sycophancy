@@ -176,9 +176,14 @@ def test_download_checks_sha256(tmp_path, monkeypatch):
     assert se.download("http://example/a.jsonl", target, sha256=good) == target
     with pytest.raises(ValueError, match="sha256"):
         se.download("http://example/a.jsonl", target, sha256="0" * 64)
-    # the pinned default URL is checked against the hash of the file the runs used
+    # the pinned default URL is checked against the hash of the file the runs used, and a
+    # payload that does not match is never written
+    other = tmp_path / "other.jsonl"
     with pytest.raises(ValueError, match=se.ANSWER_SHA256):
-        se.download(se.ANSWER_URL, tmp_path / "other.jsonl")
+        se.download(se.ANSWER_URL, other)
+    assert not other.exists()
+    assert not other.with_name(other.name + ".part").exists()
+    assert se.file_sha256(target) == good
 
 
 def test_default_url_is_pinned_to_a_commit():

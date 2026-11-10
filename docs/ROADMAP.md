@@ -403,13 +403,14 @@ What the numbers say:
 - [x] Held-out SycophancyEval numbers before and after GRPO
 - [x] Confidence intervals on every reported rate — `results/ci/summary.md` (bootstrap over questions for baseline and Best-of-N, Wilson plus 3–4 runs per α for GRPO)
 - [x] Limitations section: small models, synthetic user, one judge, seeds ([WRITEUP.md](WRITEUP.md) §7)
-- [x] `make data && make baseline && make bon && make grpo-all && make plots` reproduces every figure from `configs/` (stage configs checked against every stored result by `tests/test_reported_configs.py`; `data/prompts.jsonl` byte-identical; the first-pass pair is not rerun)
+- [x] `make data && make baseline && make bon && make grpo-all && make plots` reproduces every figure from `configs/` (stage configs checked against every reported result by `tests/test_reported_configs.py`; `data/prompts.jsonl` byte-identical; the first-pass pair is not rerun)
 - [ ] Write-up published; README links to it (draft linked)
 
 ## 9. Reproduce what exists today
 
 ```bash
-make test       # includes tests/test_reported_configs.py: configs/ against every stored result config
+pip install -r requirements.txt -r requirements-dev.txt -e .   # or: make setup
+make test       # includes tests/test_reported_configs.py: configs/ against every reported result config
 make data       # data/prompts.jsonl (byte-identical to the one the runs used) + SycophancyEval (pinned, sha256-checked)
 make baseline   # results/baseline/*.json      (configs/baseline.yaml)
 make bon        # results/bon/*.json           (configs/bon.yaml)
@@ -422,17 +423,19 @@ The committed `results/baseline/*.json`, `results/bon/*.json`,
 `results/grpo/*/{curve.jsonl,summary.json,train_log.jsonl}` (and the first
 pair of delayed runs under `results/grpo_first_pass/`) are the runs behind the
 tables above. Every result JSON stores the stage config it ran with under `"config"`, and
-`configs/` now equals those configs: `transformers` generation, 300 GRPO steps at lr 3e-5
+`configs/` now equals those of every run under `results/baseline`, `bon`, `grpo` and
+`grpo_first_pass` (the smoke runs in `grpo_smoke/` used other settings): `transformers` generation, 300 GRPO steps at lr 3e-5
 constant after a 10-step warmup, 16 × 4 completions per step, evaluation every 25 steps,
 W&B off. The judge config is stored only as a path; `configs/simulator.yaml` holds the local
 Qwen2.5-7B-Instruct judge of §2.2, and a test pins it to that. `requirements.txt` pins the
-GPU stack all runs recorded (torch 2.6.0, transformers 5.20.2, TRL 0.29.1, PEFT 0.21.2);
-vLLM moved to `requirements-vllm.txt`. A seed other than 42 is `make grpo SEED=43` (or
+GPU stack all runs recorded (torch 2.6.0, transformers 5.20.2, TRL 0.29.1, PEFT 0.21.2,
+accelerate, datasets, tokenizers, safetensors); vLLM moved to `requirements-vllm.txt`,
+untested with that stack. A seed other than 42 is `make grpo SEED=43` (or
 `--seed 43`), which adds `-s43` to the run name, as in the committed runs; `train_one` now
 writes `train_log.jsonl` itself (the committed ones were extracted from the trainer state
 and match it row for row). `make grpo-all` reruns 11 of the 13 GRPO runs: the first seed-42
 pair under `results/grpo_first_pass/` ran the same config on earlier evaluation code, which
 recorded the training reward on its eval curve instead of the two judges. The per-sample
 JSONL files are not committed because of their size. Other judges and vLLM generation: see
-the README; the judge score cache is keyed by backend and model, so switching judges never
-reuses old scores.
+the README; the judge score cache is keyed by the backend and its scoring settings, so
+switching judges never reuses old scores.

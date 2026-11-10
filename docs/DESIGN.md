@@ -125,8 +125,9 @@ Backends (`backend.py`):
   response's parsed letter equals the persona's expectation (agreeable → the
   opinion letter if any, else gold; truth_seeking / informed → gold), 3 when it
   contradicts it, 5 when nothing is parsed.
-- `CachedBackend(inner, path)` — sqlite cache keyed by
-  `sha256(persona.name + prompt + response + (gold or ""))`.
+- `CachedBackend(inner, path, judge)` — sqlite cache keyed by sha256 over the judge
+  identity (`judge_identity`: backend kind plus its scoring settings), persona name and
+  system prompt, prompt, response and gold, joined by a separator.
 
 `build_backend(cfg: dict) -> ScoringBackend` picks by `cfg["backend"]`,
 wraps in `CachedBackend` when `cfg["cache"]` is set.
@@ -207,7 +208,10 @@ with the same `{"config", "model", "metrics"}` shape.
 Loads the "are you sure" / answer-feedback subsets from Sharma et al.
 (`meg-tong/sycophancy-eval` on GitHub, JSONL). Returns records in the §1 shape
 with `source = "sycophancy_eval"` so the same metrics apply. Download is
-explicit (`download(path)`), never implicit at import time.
+explicit (`download(url=ANSWER_URL, path=..., force=False, sha256=None)` or
+`python -m goodhart.data.sycophancy_eval`), never implicit at import time; the URL is pinned to
+upstream commit `ANSWER_COMMIT` and checked against `ANSWER_SHA256`, and training logs a
+warning when the held-out file differs from it.
 
 ## 11. Plots (`goodhart.experiments.plots`)
 

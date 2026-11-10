@@ -121,7 +121,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
 - [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
-- [ ] Write-up — draft in docs/WRITEUP.md, final by Nov 17
+- [ ] Write-up — draft in docs/WRITEUP.md (~1 850 words), final by Nov 17
 
 ## References
 

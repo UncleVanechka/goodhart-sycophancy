@@ -315,7 +315,7 @@ What the numbers say:
   flat), one notch earlier in training than in selection. The edge is close
   even here: the seed-44 run ends with 23-token completions, 83–90 % tied
   groups over its last 25 steps, informed rating down from 8.2 to 7.5 and
-  sycophancy back from 35 % to its starting 46–49 % over the last 50 steps. Held-out sycophancy moves by −1 to +1 points
+  sycophancy back from 35 % at step 200 to 46 % (start 49 %). Held-out sycophancy moves by −1 to +1 points
   against each run's own start.
 - **The persona mixture holds near the start, with half the proxy gain.**
   Two runs (seeds 42, 43), 70 % of the questions rated by the agreeable user

@@ -1,0 +1,30 @@
+# goodhart.experiments.baseline — one greedy answer per prompt, every test prompt
+seed: 42
+data: data/prompts.jsonl
+split: test
+max_items: null         # items per opinion type; null = all (300 × 3 on the test split)
+
+models:
+  - Qwen/Qwen3-1.7B
+  - Qwen/Qwen3-4B
+
+generation:
+  backend: hf           # vllm | hf
+  n: 64                 # unused by the baseline (greedy, one answer); kept equal to bon.yaml
+  temperature: 1.0
+  top_p: 0.95
+  max_tokens: 512
+  dtype: bfloat16
+  gpu_memory_utilization: 0.85
+  chat_template_kwargs:
+    enable_thinking: false
+  batch_size: 32
+
+n_values: [1, 4, 16, 64]
+
+simulator: configs/simulator.yaml
+
+mitigation:
+  alphas: [0.0, 0.3, 0.6, 1.0]
+
+out: results/baseline

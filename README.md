@@ -56,7 +56,7 @@ per α plus the persona mixture.
 ## Repository layout
 
 ```
-configs/          YAML configs for every stage (base, data, simulator, bon, grpo, mitigation)
+configs/          YAML configs for every stage, set to the reported runs (base, data, simulator, baseline, bon, grpo, mitigation, persona_mix)
 src/goodhart/
   data/           dataset builder, opinion templates, SycophancyEval loader
   simulator/      personas, scoring backends (Anthropic / vLLM / local HF judge / mock), reward functions
@@ -76,19 +76,24 @@ figures/          plots; the PNGs rendered from the committed results are tracke
 ```bash
 python3.11 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -e .
-cp .env.example .env            # ANTHROPIC_API_KEY, WANDB_API_KEY, HF_TOKEN
-make test                        # unit tests, CPU only
+make test                        # unit tests, CPU only; includes a check that configs/ matches the reported runs
 
-make data                        # build prompts -> data/prompts.jsonl
-make baseline                    # experiment 1
-make bon                         # experiment 2 + BoN mitigation
-make grpo                        # experiment 3 (GPU)
-make grpo-mitigation             # experiment 4 (GPU)
+make data                        # prompts -> data/prompts.jsonl, SycophancyEval -> data/sycophancy_eval/
+make baseline                    # experiment 1 (GPU)
+make bon                         # experiment 2 + BoN mitigation (GPU)
+make grpo-all                    # experiments 3-4: every GRPO run in the write-up, ~75 GPU-hours
+make ci                          # results/ci/summary.md
 make plots                       # figures/*.png
 ```
 
-Every stage reads one YAML from `configs/`, uses the seed from `configs/base.yaml`,
-and writes a JSON with its config and outputs to `results/`.
+One GRPO run at a time: `make grpo`, `make grpo-mitigation` or `make grpo-persona-mix`,
+with `SEED=43` for another seed. The configs in `configs/` are the ones the reported runs
+used, with the local Qwen2.5-7B-Instruct judge; `tests/test_reported_configs.py` checks them
+against the config stored in every committed result file. `make data` rebuilds the exact
+`data/prompts.jsonl` the runs used. GRPO sampling on the GPU is not bit-reproducible, so a
+rerun reproduces the spread across seeds, not each run to the digit. The Anthropic or vLLM
+judge is one line in `configs/simulator.yaml` (`cp .env.example .env` for the API key);
+W&B logging is `wandb.mode` in `configs/base.yaml`.
 
 ## Stack
 
@@ -100,7 +105,7 @@ and writes a JSON with its config and outputs to `results/`.
 | Training data | MMLU / ARC + opinion templates: 3 000 questions × 3 opinion types = 9 000 prompts (7 200 / 900 / 900 split) |
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
 | RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
-| Tracking | Weights & Biases |
+| Tracking | Weights & Biases (off in the reported runs) |
 | Compute | 1× A100 80 GB; 83 GPU-hours for everything reported |
 
 ## Status
@@ -121,6 +126,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
 - [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
+- [x] Every reported run reproducible from `configs/` with `make` (checked by `tests/test_reported_configs.py`)
 - [ ] Write-up — draft in docs/WRITEUP.md (~1 850 words), final by Nov 17
 
 ## References

@@ -1,5 +1,6 @@
 # goodhart.simulator — the simulated user that produces the proxy reward
-backend: anthropic      # anthropic | vllm | hf | mock
+# The reported results used the local judge (hf); anthropic and vllm are drop-in alternatives
+backend: hf             # anthropic | vllm | hf | mock
 
 anthropic:
   model: claude-haiku-5-5

@@ -1,7 +1,12 @@
 PY ?= .venv/bin/python
 CFG ?= configs
 
-.PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation plots clean
+# Reproduce everything reported: make data baseline bon grpo-all ci plots
+# One GRPO run with another seed: make grpo SEED=43 (run name gets -s43)
+SEED ?=
+SEED_ARG = $(if $(SEED),--seed $(SEED))
+
+.PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -21,18 +26,31 @@ lint:
 
 data:
 	$(PY) -m goodhart.data.build --config $(CFG)/data.yaml
+	$(PY) -m goodhart.data.sycophancy_eval
 
 baseline:
-	$(PY) -m goodhart.experiments.baseline --config $(CFG)/bon.yaml
+	$(PY) -m goodhart.experiments.baseline --config $(CFG)/baseline.yaml
 
 bon:
 	$(PY) -m goodhart.experiments.best_of_n --config $(CFG)/bon.yaml
 
 grpo:
-	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo.yaml
+	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo.yaml $(SEED_ARG)
 
 grpo-mitigation:
-	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/mitigation.yaml
+	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/mitigation.yaml $(SEED_ARG)
+
+grpo-persona-mix:
+	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/persona_mix.yaml $(SEED_ARG)
+
+# Every GRPO run in the write-up: immediate and delayed reward at seeds 42-44, the persona
+# mixture at seeds 42-43. ~75 GPU-hours on one A100 80 GB
+grpo-all:
+	for s in 42 43 44; do $(MAKE) grpo SEED=$$s && $(MAKE) grpo-mitigation SEED=$$s || exit 1; done
+	for s in 42 43; do $(MAKE) grpo-persona-mix SEED=$$s || exit 1; done
+
+ci:
+	$(PY) -m goodhart.experiments.confidence
 
 plots:
 	$(PY) -m goodhart.experiments.plots --results results --out figures

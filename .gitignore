@@ -17,7 +17,7 @@ htmlcov/
 *.local.yaml
 
 # Data, checkpoints, outputs
-data/
+/data/
 checkpoints/
 outputs/
 wandb/

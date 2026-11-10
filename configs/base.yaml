@@ -7,4 +7,4 @@ paths:
 wandb:
   project: goodhart-sycophancy
   entity: null
-  mode: online        # online | offline | disabled
+  mode: disabled      # online | offline | disabled; the reported runs did not log to W&B

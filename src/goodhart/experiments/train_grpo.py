@@ -317,6 +317,21 @@ def sweep_run_name(run_name: str, alpha: float) -> str:
     return f"{run_name}-a{alpha}"
 
 
+def with_seed(cfg: dict, seed: int | None) -> dict:
+    """Config for another seed: ``seed`` replaced and ``-s<seed>`` appended to ``run_name``.
+
+    ``None`` or the config's own seed returns the config unchanged, so the default seed keeps
+    the plain run name (``grpo-immediate``) and others get ``grpo-immediate-s43``; a sweep
+    then appends ``-a<alpha>`` after the seed suffix.
+    """
+    if seed is None or int(seed) == int(cfg["seed"]):
+        return cfg
+    out = copy.deepcopy(cfg)
+    out["seed"] = int(seed)
+    out["run_name"] = f"{cfg['run_name']}-s{int(seed)}"
+    return out
+
+
 def expand_sweep(cfg: dict) -> list[tuple[str, dict]]:
     """Expand ``sweep.alphas`` into ``(run_name, config)`` pairs; no sweep gives one pair."""
     alphas = (cfg.get("sweep") or {}).get("alphas")
@@ -486,6 +501,12 @@ def main(argv: list[str] | None = None) -> None:
     """CLI: ``python -m goodhart.experiments.train_grpo --config configs/grpo.yaml``."""
     parser = argparse.ArgumentParser(description="GRPO against the simulated-user proxy reward")
     parser.add_argument("--config", required=True, help="stage YAML, e.g. configs/grpo.yaml")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="seed other than the config's; adds -s<seed> to run_name",
+    )
     args = parser.parse_args(argv)
 
     from goodhart.config import load_config, set_seed
@@ -495,7 +516,7 @@ def main(argv: list[str] | None = None) -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     load_dotenv_if_present()
-    cfg = load_config(args.config)
+    cfg = with_seed(load_config(args.config), args.seed)
     set_seed(int(cfg["seed"]))
     records = read_jsonl(cfg["data"])
     heldout = load_heldout(cfg, random.Random(int(cfg["seed"])))

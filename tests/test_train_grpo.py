@@ -145,6 +145,17 @@ def test_no_sweep_returns_single_run_unchanged():
     assert tg.sweep_run_name("x", 1.0) == "x-a1.0"
 
 
+def test_with_seed_keeps_default_seed_and_suffixes_others():
+    cfg = {"seed": 42, "run_name": "grpo-delayed", "sweep": {"alphas": [0.3]}}
+    assert tg.with_seed(cfg, None) is cfg
+    assert tg.with_seed(cfg, 42) is cfg
+    other = tg.with_seed(cfg, 43)
+    assert other["seed"] == 43
+    assert other["run_name"] == "grpo-delayed-s43"
+    assert cfg == {"seed": 42, "run_name": "grpo-delayed", "sweep": {"alphas": [0.3]}}
+    assert [name for name, _ in tg.expand_sweep(other)] == ["grpo-delayed-s43-a0.3"]
+
+
 def test_build_grpo_kwargs_passes_unknown_keys_through(tmp_path):
     cfg = {
         "seed": 7,

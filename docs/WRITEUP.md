@@ -245,24 +245,18 @@ shares.
 ## Reproduce
 
 ```bash
-make data                                                                  # MMLU + ARC -> data/prompts.jsonl
-python -m goodhart.experiments.baseline  --config configs/bon.yaml         # results/baseline/
-python -m goodhart.experiments.best_of_n --config configs/bon.yaml         # results/bon/
-python -m goodhart.experiments.train_grpo --config configs/grpo.yaml       # results/grpo/grpo-immediate/
-python -m goodhart.experiments.train_grpo --config configs/mitigation.yaml # results/grpo/grpo-delayed-a*/
-#   persona mix: same config with run_name=grpo-persona-mix, reward.kind=persona_mix, sweep.alphas=[] (seed 43: seed=43, run_name=grpo-persona-mix-s43)
-python -m goodhart.experiments.confidence                                  # results/ci/summary.md
-python -m goodhart.experiments.plots                                       # figures/*.png
+make data       # data/prompts.jsonl (byte-identical to the one used) and SycophancyEval
+make baseline   # results/baseline/
+make bon        # results/bon/
+make grpo-all   # results/grpo/: α = 0, 0.3, 0.6 at seeds 42–44, persona mixture at 42–43
+make ci         # results/ci/summary.md
+make plots      # figures/*.png
 ```
 
-The committed configs default to vLLM generation and an API simulator; the
-reported runs used `transformers.generate` and the local judge, and the GRPO
-overrides listed in [ROADMAP.md](ROADMAP.md) §9 (300 steps, lr 3e-5 constant
-after warmup, 8 × 8 completions per step, eval every 25 steps, seeds 42–44;
-the persona-mixture runs set `run_name: grpo-persona-mix` (seed 43: `seed: 43`,
-`run_name: grpo-persona-mix-s43`), `reward.kind: persona_mix` with weights
-0.7 / 0.3, and `sweep.alphas: []`).
-Every result JSON stores the merged config it ran with.
+The configs in `configs/` are those of the reported runs (local Qwen2.5-7B-Instruct
+judge, `transformers` generation); a test checks them against the config stored in every
+result file. GRPO sampling on the GPU is not bit-reproducible, so a rerun reproduces the
+spread across seeds rather than each run to the digit.
 
 ## References
 

@@ -403,35 +403,31 @@ What the numbers say:
 - [x] Held-out SycophancyEval numbers before and after GRPO
 - [x] Confidence intervals on every reported rate — `results/ci/summary.md` (bootstrap over questions for baseline and Best-of-N, Wilson plus 3–4 runs per α for GRPO)
 - [x] Limitations section: small models, synthetic user, one judge, seeds ([WRITEUP.md](WRITEUP.md) §7)
-- [ ] `make data && make baseline && make bon && make grpo && make plots` reproduces every figure from `configs/`
+- [x] `make data && make baseline && make bon && make grpo-all && make plots` reproduces every figure from `configs/` (configs checked against every stored result by `tests/test_reported_configs.py`; `make data` byte-identical)
 - [ ] Write-up published; README links to it (draft linked)
 
 ## 9. Reproduce what exists today
 
 ```bash
-make data                                   # MMLU + ARC -> data/prompts.jsonl
-python -m goodhart.experiments.baseline  --config configs/bon.yaml    # results/baseline/*.json
-python -m goodhart.experiments.best_of_n --config configs/bon.yaml    # results/bon/*.json
-python -m goodhart.experiments.train_grpo --config configs/grpo.yaml       # results/grpo/grpo-immediate/
-python -m goodhart.experiments.train_grpo --config configs/mitigation.yaml # results/grpo/grpo-delayed-a*/
-#   persona mix: same config with run_name=grpo-persona-mix, reward.kind=persona_mix, sweep.alphas=[] (seed 43: seed=43, run_name=grpo-persona-mix-s43)
-python -m goodhart.experiments.plots                                  # figures/*.png
+make test       # includes tests/test_reported_configs.py: configs/ against every stored result config
+make data       # data/prompts.jsonl (byte-identical to the one the runs used) + SycophancyEval
+make baseline   # results/baseline/*.json      (configs/baseline.yaml)
+make bon        # results/bon/*.json           (configs/bon.yaml)
+make grpo-all   # results/grpo/*/              (grpo.yaml, mitigation.yaml at seeds 42-44; persona_mix.yaml at 42-43)
+make ci         # results/ci/summary.md
+make plots      # figures/*.png
 ```
 
 The committed `results/baseline/*.json`, `results/bon/*.json`,
 `results/grpo/*/{curve.jsonl,summary.json,train_log.jsonl}` (and the first
 pair of delayed runs under `results/grpo_first_pass/`) are the runs behind the
-tables above. The GRPO runs overrode the config with
-`use_vllm: false`, `max_steps: 300`, `learning_rate: 3e-5`,
-`lr_scheduler_type: constant_with_warmup`, `warmup_steps: 10`,
-`per_device_train_batch_size: 16`, `gradient_accumulation_steps: 4`,
-`eval.every_steps: 25`; the seed runs add `seed: 43` or `44` and a `-s<seed>`
-suffix on `run_name`; the persona-mixture runs set `reward: {kind: persona_mix,
-persona_weights: {agreeable: 0.7, truth_seeking: 0.3}}` and `sweep.alphas: []`;
-`summary.json` stores the merged config. The repo configs default to vLLM generation and the
-Anthropic simulator; on the GPU runner these runs overrode
-`generation.backend: hf` and `simulator.backend: hf` (see §2.2), the baseline
-used all 900 test prompts with `generation.batch_size: 32`, and Best-of-N used
-`max_items: 200` with `generation.batch_size: 4`. Every result JSON stores the
-exact config it ran with under `"config"`. The per-sample JSONL files are not
-committed because of their size.
+tables above. Every result JSON stores the exact config it ran with under `"config"`, and
+`configs/` now equals those configs: the local judge (`simulator.backend: hf`),
+`transformers` generation, 300 GRPO steps at lr 3e-5 constant after a 10-step warmup,
+16 × 4 completions per step, evaluation every 25 steps, W&B off. A seed other than 42 is
+`make grpo SEED=43` (or `--seed 43`), which adds `-s43` to the run name, as in the committed
+runs. `make grpo-all` reruns seed 42 once per α; the first seed-42 pair under
+`results/grpo_first_pass/` was an earlier run of the same config with the training reward on
+its eval curve instead of the two judges. The per-sample JSONL files are not committed
+because of their size. The vLLM and Anthropic backends remain one line away in
+`configs/bon.yaml`, `configs/baseline.yaml` and `configs/simulator.yaml`.

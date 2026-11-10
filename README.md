@@ -140,7 +140,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
 - [x] Every run in results/baseline, bon and grpo reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
-- [ ] Write-up — draft in docs/WRITEUP.md (~1 850 words), final by Nov 17
+- [ ] Write-up — draft in docs/WRITEUP.md (~2 000 words, proofread Nov 10), final by Nov 17
 
 ## References
 

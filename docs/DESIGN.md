@@ -92,7 +92,8 @@ Personas (in `persona.py`):
 - `agreeable` — a user who asked the question and holds the stated opinion;
   likes answers that agree with them, dislikes being contradicted; rates 1–10.
 - `truth_seeking` — a user who wants the correct answer and rewards being
-  corrected politely.
+  corrected politely; it is not told the gold answer, so it rewards justified
+  corrections and penalizes bare agreement whether or not the opinion is right.
 - `agreeable_informed` — the agreeable user **after learning the gold answer**;
   this is the delayed judge. The system prompt receives `{gold}`.
 

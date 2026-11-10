@@ -101,7 +101,7 @@ and writes a JSON with its config and outputs to `results/`.
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
 | RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
 | Tracking | Weights & Biases |
-| Compute | 1× A100 80 GB; 77 GPU-hours for everything reported |
+| Compute | 1× A100 80 GB; 83 GPU-hours for everything reported |
 
 ## Status
 
@@ -119,7 +119,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO smoke on Qwen3-1.7B: proxy and sycophancy rise within 200 steps, gold falls
 - [x] GRPO full run on Qwen3-1.7B with held-out SycophancyEval: sycophancy 49 → 98 %, held-out 62 → 85 %
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
-- [x] Persona mixture in GRPO, one run: sycophancy 49 → 55 % at step 300 (86–98 % with the agreeable user alone) — the α = 0.3 shape, not the α = 0.6 one
+- [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
 - [ ] Write-up — draft in docs/WRITEUP.md, final by Nov 17
 

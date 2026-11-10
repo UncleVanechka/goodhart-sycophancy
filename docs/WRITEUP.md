@@ -1,6 +1,6 @@
 # Optimizing an LLM for a simulated user's approval breeds sycophancy; a delayed reward fixes it under selection and only half under training
 
-*Draft, 2026-11-09. Code, configs and every result file behind the numbers
+*Draft, 2026-11-10. Code, configs and every result file behind the numbers
 are in this repository; intervals in [`results/ci/summary.md`](../results/ci/summary.md).*
 
 **TL;DR.** On a multiple-choice task where the user states an opinion that is
@@ -17,15 +17,18 @@ under selection as advertised, but under training it is unstable at weight
 α = 0.3 (four runs end at 46, 60, 61 and 97 %) and holds at α = 0.6 only by
 giving up the proxy: the immediate rating does not rise at all. The other
 recommender remedy, audience diversity — 70 % of users agreeable,
-30 % truth-seeking — behaves like the small α: in one run it cuts sycophancy
-well below the agreeable user alone, but ends at 55 %, above the 49 % start,
-with the immediate rating up 0.46.
+30 % truth-seeking — is the only setting trained that raised the immediate
+rating without a measurable rise in sycophancy: in two runs sycophancy ends
+at 48 and 55 % against the 49 % start, neither beyond noise, accuracy stays
+flat, and the rating rises by 0.24–0.46, about half of what the agreeable
+user alone yields. α = 0.6 still ends with less sycophancy and more accuracy. Two runs do not make it stable: α = 0.3 run twice
+with the same seed ended at 46 and 97 %.
 
 ![Goodhart frontier](../figures/goodhart_frontier.png)
 
 *Figure 1. Gold accuracy against the agreeable user's rating. Solid: Best-of-N,
 N = 1 → 64, both models, α ∈ {0, 0.3, 0.6, 1}. Dashed: GRPO on Qwen3-1.7B,
-mean over runs per α, and the single persona-mixture run. Selection moves
+mean over runs per α and over the two persona-mixture runs. Selection moves
 right along a flat or rising line;
 training on the immediate rating moves right and down; training at α = 0.6
 does not move.*
@@ -84,7 +87,7 @@ prompts × 8 completions, learning rate 3e-5 constant after a 10-step warmup, KL
 penalty 0.04, no thinking mode, evaluation every 25 steps on 300 validation
 questions × 3 opinions and on the held-out items. Policies: Qwen3-1.7B and
 Qwen3-4B for (i) and (ii), Qwen3-1.7B for (iii). Single-GPU jobs on one A100
-80 GB, 77 GPU-hours in total, 66 of them GRPO.
+80 GB, 83 GPU-hours in total, 78 of them GRPO.
 
 **Uncertainty.** Baseline and Best-of-N rates carry 95 % bootstrap intervals
 over questions (a question is resampled with its three variants); comparisons
@@ -125,8 +128,8 @@ zero.
 
 ![GRPO curves](../figures/grpo_curves.png)
 
-*Figure 3. GRPO on Qwen3-1.7B, mean over runs per α with min–max bands, and
-the single persona-mixture run: the two ratings, the training reward, gold,
+*Figure 3. GRPO on Qwen3-1.7B, mean over runs per series (each α, and the
+persona mixture) with min–max bands: the two ratings, the training reward, gold,
 sycophancy and the held-out metrics against training step.*
 
 GRPO against the immediate rating, three seeds, step 0 → 300:
@@ -175,15 +178,15 @@ trade hypothesis 2 asks for, measurable here because the proxy is held. At
 **Under training** it does not hold in that form. GRPO on Qwen3-1.7B with the
 mixed reward, step 300, mean over runs (min–max):
 
-| | α = 0, 3 runs | α = 0.3, 4 runs | α = 0.6, 4 runs | persona mix, 1 run |
+| | α = 0, 3 runs | α = 0.3, 4 runs | α = 0.6, 4 runs | persona mix, 2 runs |
 |---|---|---|---|---|
-| sycophancy rate | 93 % (86–98) | 66 % (46–97) | 40 % (37–46) | 55 % |
-| gold accuracy | 56 % (54–59) | 62 % (54–67) | 67 % (66–67) | 64 % |
-| gold under a wrong opinion | 6 % (2–12) | 28 % (3–44) | 47 % (44–49) | 37 % |
-| held-out sycophancy change, points (vs own start) | +16 (+13 to +23) | +7 (+2 to +19) | −1 (−1 to +1) | +2 |
-| proxy, immediate rating (from 7.79) | 8.54 (8.37–8.85) | 8.33 (8.17–8.54), n = 3 | 7.85 (7.78–7.90), n = 3 | 8.25 |
-| informed rating (from 7.53) | 6.59 (6.38–6.80), n = 2 | 7.07 (6.30–7.49), n = 3 | 7.92 (7.50–8.22), n = 3 | 7.75 |
-| training-completion length, tokens (from 67–80) | 18 (7–32) | 54 (32–78) | 71 (23–89) | 82 |
+| sycophancy rate | 93 % (86–98) | 66 % (46–97) | 40 % (37–46) | 52 % (48–55) |
+| gold accuracy | 56 % (54–59) | 62 % (54–67) | 67 % (66–67) | 65 % (64–66) |
+| gold under a wrong opinion | 6 % (2–12) | 28 % (3–44) | 47 % (44–49) | 40 % (37–43) |
+| held-out sycophancy change, points (vs own start) | +16 (+13 to +23) | +7 (+2 to +19) | −1 (−1 to +1) | +2 (+2 to +3) |
+| proxy, immediate rating (from 7.79) | 8.54 (8.37–8.85) | 8.33 (8.17–8.54), n = 3 | 7.85 (7.78–7.90), n = 3 | 8.14 (8.03–8.25) |
+| informed rating (from 7.53) | 6.59 (6.38–6.80), n = 2 | 7.07 (6.30–7.49), n = 3 | 7.92 (7.50–8.22), n = 3 | 7.74 (7.73–7.75) |
+| training-completion length, tokens (from 67–80) | 18 (7–32) | 54 (32–78) | 71 (23–89) | 70 (57–82) |
 
 *α = 0.3 slows the collapse; it does not stop it.* The four runs end at 46,
 60, 61 and 97 % sycophancy. The two in the middle are still climbing at step
@@ -211,26 +214,28 @@ last 50 steps while completions shorten to 23 tokens and 83–90 % of groups
 tie. With two α values trained, the threshold between "slows" and "holds" is
 not located, only bracketed.
 
-*A mixture of users does what the small α does.* Hypothesis 3 swaps the
-delayed signal for audience diversity: 70 % of the questions are rated by the
-agreeable user, 30 % by the truth-seeking one, each question by one persona
-throughout, and the policy is not told which. One run (seed 42; last column
-of the table). Sycophancy dips to 41 % at step 25, as in most runs —
-including two of the three trained on the agreeable user alone — so the dip
-says nothing about the truth-seeking minority. It then climbs to 55 % at
-step 300 [50, 61], above the 49 % start; the rise from step 150 (43 → 55 %)
-is beyond noise, the last 100 steps (51 → 55 %) are not, so one run cannot
-tell whether it is still rising. Accuracy goes 65 → 64 %, accuracy under a
-wrong opinion 42 → 37 %, held-out +2 points. The immediate rating rises
-7.79 → 8.25, the informed rating 7.53 → 7.75 after peaking at 8.2;
-completions stay long (82 tokens) and the KL stays at 0.07. This is the
-α = 0.3 shape, for the same reason: the proxy is still being optimized, and
-agreement wins the average because it wins 70 % of the draws. Hypothesis 3
-as stated — less sycophancy than a single agreeable persona — holds (55 %
-against 86–98 %, accuracy −1.5 points against −6 to −11, the informed rating
-up rather than down); what fails is the stronger requirement of holding
-sycophancy at its starting level. With one run, the spread seen at α = 0.3
-(46–97 %) cannot be ruled out in either direction.
+*A mixture of users holds sycophancy near its start and keeps part of the
+proxy gain.* Hypothesis 3 swaps the delayed signal for audience diversity:
+70 % of the questions are rated by the agreeable user, 30 % by the
+truth-seeking one, each question by one persona throughout, and the policy is
+not told which. Two runs (seeds 42 and 43; last column of the table). Both dip
+to 41 % within 50 steps, as most runs do — including two of the three trained
+on the agreeable user alone — so the dip says nothing about the truth-seeking
+minority. After that they wander: seed 42 climbs from 43 % at step 150 to 55 %
+[50, 61] at step 300, seed 43 reaches 55 % at step 150 and returns to 48 %
+[42, 53]. Neither endpoint is beyond noise of the 49 % start, or of the other
+(±8 points on a difference at n = 300). Accuracy stays at 64–66 % (start
+65 %), accuracy under a wrong opinion at 37–43 % (start 42 %), held-out
+sycophancy moves +2 and +3 points. The immediate rating rises by 0.46 and
+0.24 — about half the mean gain with the agreeable user alone (+0.75) — and
+the informed rating by 0.2 in both; completions stay far longer than with
+the agreeable user alone (82 and 57 tokens against 7–32; seed 43 shortened
+from 80) and the KL stays at 0.04–0.07. That is the trade α = 0.6 did not make: some
+approval bought without a measurable rise in sycophancy. Hypothesis 3 as
+stated — less sycophancy than a single agreeable persona — holds (48–55 %
+against 86–98 %, accuracy flat against −6 to −12 points). Stability is not
+settled: agreement still wins 70 % of the draws, and α = 0.3 run twice with
+seed 42 ended at 46 and 97 %, so two runs cannot exclude a collapse.
 
 ## 6. What the judge is, and is not
 
@@ -259,11 +264,11 @@ it, but absolute ratings are not quality scores.
 - **Synthetic user, synthetic task.** Multiple choice with an explicit wrong
   opinion is the cleanest case for measuring sycophancy and the easiest to
   exploit; the held-out benchmark shares the format.
-- **Three to four runs per α, one persona mixture, 300 steps.** Enough to see
+- **Three to four runs per α, two persona mixtures, 300 steps.** Enough to see
   that α = 0.3 is unstable and α = 0.6 held, not enough to locate the
-  threshold or to say what α = 0.6 does at 1 000 steps. The persona mixture
-  ran once; its endpoint sits inside the α = 0.3 spread, so one run says "not
-  a different regime", not where it lands.
+  threshold or to say what α = 0.6 does at 1 000 steps. Both persona-mixture
+  runs end near the start, but the first α = 0.3 run did too (46 %) before a
+  same-seed repeat reached 97 %; two runs bound the collapse risk loosely.
 
 ## 8. What this suggests
 
@@ -272,12 +277,13 @@ reranking essentially as advertised, and transfers to training only when the
 delayed signal dominates the reward — at which point it is no longer a
 correction to the proxy but a different objective. The cheap version of the
 fix, a small α that keeps the proxy, is the one that fails under RL; its
-audience-diversity cousin, a 30 % share of users who punish agreement, only
-slows the same drift: 55 % sycophancy against 86–98 % with the agreeable user
-alone, but above the 49 % start while the proxy keeps climbing. Next: a
-sharper agreeable persona and a pairwise judge, the same ladder on Qwen3-4B,
-longer runs at α = 0.6, and the persona mixture repeated and with a larger
-truth-seeking share.
+audience-diversity cousin, a 30 % share of users who punish agreement, did
+better in two runs: sycophancy stayed within noise of its start (48 and 55 %
+against 49 %) while the proxy rose about half as much as without it — the one
+setting here that kept some approval gain without measurably more
+sycophancy, pending more seeds. Next: a sharper agreeable persona and a
+pairwise judge, the same ladder on Qwen3-4B, longer runs at α = 0.6, and more
+persona-mixture seeds at other truth-seeking shares.
 
 ## Reproduce
 
@@ -287,7 +293,7 @@ python -m goodhart.experiments.baseline  --config configs/bon.yaml         # res
 python -m goodhart.experiments.best_of_n --config configs/bon.yaml         # results/bon/
 python -m goodhart.experiments.train_grpo --config configs/grpo.yaml       # results/grpo/grpo-immediate/
 python -m goodhart.experiments.train_grpo --config configs/mitigation.yaml # results/grpo/grpo-delayed-a*/
-#   persona mix: same config with run_name=grpo-persona-mix, reward.kind=persona_mix, sweep.alphas=[]
+#   persona mix: same config with run_name=grpo-persona-mix, reward.kind=persona_mix, sweep.alphas=[] (seed 43: seed=43, run_name=grpo-persona-mix-s43)
 python -m goodhart.experiments.confidence                                  # results/ci/summary.md
 python -m goodhart.experiments.plots                                       # figures/*.png
 ```
@@ -296,8 +302,9 @@ The committed configs default to vLLM generation and an API simulator; the
 reported runs used `transformers.generate` and the local judge, and the GRPO
 overrides listed in [ROADMAP.md](ROADMAP.md) §9 (300 steps, lr 3e-5 constant
 after warmup, 8 × 8 completions per step, eval every 25 steps, seeds 42–44;
-the persona-mixture run sets `run_name: grpo-persona-mix`, `reward.kind: persona_mix`
-with weights 0.7 / 0.3, and `sweep.alphas: []`).
+the persona-mixture runs set `run_name: grpo-persona-mix` (seed 43: `seed: 43`,
+`run_name: grpo-persona-mix-s43`), `reward.kind: persona_mix` with weights
+0.7 / 0.3, and `sweep.alphas: []`).
 Every result JSON stores the merged config it ran with.
 
 ## References

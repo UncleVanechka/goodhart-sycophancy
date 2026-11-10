@@ -1,0 +1,5 @@
+# Optional: vLLM generation (generation.backend: vllm, grpo.use_vllm: true) and the vLLM judge.
+# The reported runs did not use it; vLLM wheels pin their own torch, so install it in a
+# separate environment if the pinned torch in requirements.txt must stay
+-r requirements.txt
+vllm>=0.6

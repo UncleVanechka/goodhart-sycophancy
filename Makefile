@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 CFG ?= configs
 
-# Reproduce everything reported: make data baseline bon grpo-all ci plots
+# Reproduce the reported tables and figures: make data baseline bon grpo-all ci plots
 # One GRPO run with another seed: make grpo SEED=43 (run name gets -s43)
 SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
@@ -43,8 +43,9 @@ grpo-mitigation:
 grpo-persona-mix:
 	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/persona_mix.yaml $(SEED_ARG)
 
-# Every GRPO run in the write-up: immediate and delayed reward at seeds 42-44, the persona
-# mixture at seeds 42-43. ~75 GPU-hours on one A100 80 GB
+# Every run under results/grpo/: immediate and delayed reward at seeds 42-44, the persona
+# mixture at seeds 42-43 (11 of the 13 GRPO runs in the write-up; the first-pass α = 0.3 / 0.6
+# pair in results/grpo_first_pass/ is not rerun). ~61 GPU-hours on one A100 80 GB
 grpo-all:
 	for s in 42 43 44; do $(MAKE) grpo SEED=$$s && $(MAKE) grpo-mitigation SEED=$$s || exit 1; done
 	for s in 42 43; do $(MAKE) grpo-persona-mix SEED=$$s || exit 1; done

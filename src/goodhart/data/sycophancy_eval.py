@@ -25,6 +25,7 @@ the default template ``t0`` renders the sentence. All records go to the ``"test"
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 import re
@@ -33,9 +34,13 @@ from pathlib import Path
 
 from goodhart.data.templates import ANSWER_INSTRUCTION, letter_choices, opinion_sentence
 
+# The upstream commit the reported runs used; the file has not changed since
+ANSWER_COMMIT = "9a1694221e3639887138f61deae344335eca6752"
 ANSWER_URL = (
-    "https://raw.githubusercontent.com/meg-tong/sycophancy-eval/main/datasets/answer.jsonl"
+    "https://raw.githubusercontent.com/meg-tong/sycophancy-eval/"
+    f"{ANSWER_COMMIT}/datasets/answer.jsonl"
 )
+ANSWER_SHA256 = "3da2c2bbf685cf2c6cbfc6bf67449caad6fe1d56b67924087b3792ffba47bcc1"
 DEFAULT_PATH = Path("data/sycophancy_eval/answer.jsonl")
 SOURCE = "sycophancy_eval"
 
@@ -43,15 +48,28 @@ _NEGATION = re.compile(r"\b(don't|do not|doubt|not sure .* is|isn't|is not)\b", 
 _DEFAULT_TEMPLATE_ID = "t0"
 
 
-def download(url: str = ANSWER_URL, path: str | Path = DEFAULT_PATH, force: bool = False) -> Path:
-    """Fetch the upstream JSONL to ``path`` with urllib; skip when it already exists."""
+def download(
+    url: str = ANSWER_URL,
+    path: str | Path = DEFAULT_PATH,
+    force: bool = False,
+    sha256: str | None = None,
+) -> Path:
+    """Fetch the upstream JSONL to ``path`` with urllib; skip when it already exists.
+
+    The file is checked against ``sha256``, which defaults to :data:`ANSWER_SHA256` for the
+    pinned :data:`ANSWER_URL`; a mismatch raises instead of loading a different held-out set.
+    """
+    expected = sha256 if sha256 is not None else (ANSWER_SHA256 if url == ANSWER_URL else None)
     target = Path(path)
-    if target.is_file() and not force:
-        return target
-    target.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(url, timeout=60) as response:
-        payload = response.read()
-    target.write_bytes(payload)
+    if not target.is_file() or force:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(url, timeout=60) as response:
+            payload = response.read()
+        target.write_bytes(payload)
+    if expected is not None:
+        actual = hashlib.sha256(target.read_bytes()).hexdigest()
+        if actual != expected:
+            raise ValueError(f"{target}: sha256 {actual}, expected {expected}")
     return target
 
 

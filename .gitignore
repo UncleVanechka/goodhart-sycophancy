@@ -35,6 +35,7 @@ results/*
 !results/ci/
 results/grpo/*/checkpoint-*/
 results/grpo/*/final/
+results/grpo*/*/README.md
 results/baseline/*_responses.jsonl
 results/bon/*_samples.jsonl
 figures/*

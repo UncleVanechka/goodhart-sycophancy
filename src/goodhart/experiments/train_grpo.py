@@ -317,6 +317,29 @@ def sweep_run_name(run_name: str, alpha: float) -> str:
     return f"{run_name}-a{alpha}"
 
 
+TRAIN_LOG_KEYS = (
+    "step",
+    "reward",
+    "reward_std",
+    "frac_reward_zero_std",
+    "kl",
+    "completions/mean_length",
+    "learning_rate",
+    "entropy",
+    "step_time",
+)
+
+
+def train_log_rows(log_history: Iterable[dict]) -> list[dict]:
+    """Training-step rows of the trainer's ``log_history`` (those with a reward), trimmed to
+    :data:`TRAIN_LOG_KEYS`; the end-of-training summary row has no reward and is dropped."""
+    return [
+        {key: entry[key] for key in TRAIN_LOG_KEYS if key in entry}
+        for entry in log_history
+        if "reward" in entry
+    ]
+
+
 def with_seed(cfg: dict, seed: int | None) -> dict:
     """Config for another seed: ``seed`` replaced and ``-s<seed>`` appended to ``run_name``.
 
@@ -420,7 +443,7 @@ def train_one(
     proxy_fn: RewardFn | None = None,
     extra_judges: dict[str, RewardFn] | None = None,
 ) -> dict[str, Any]:
-    """Run one GRPO training; write ``curve.jsonl`` and ``summary.json`` under the run dir.
+    """Run one GRPO training; write ``curve.jsonl``, ``train_log.jsonl`` and ``summary.json``.
 
     ``reward_fn`` is what the policy is optimized against. The periodic evaluation rates the
     greedy outputs with ``proxy_fn`` (the immediate judge; ``reward_fn`` when not given) so
@@ -430,15 +453,17 @@ def train_one(
     from trl import GRPOConfig, GRPOTrainer
 
     from goodhart.config import set_seed
-    from goodhart.io import results_payload, write_json
+    from goodhart.io import results_payload, write_json, write_jsonl
 
     set_seed(int(cfg["seed"]))
     rng = random.Random(int(cfg["seed"]))
     out_dir = Path(cfg["out"]) / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
     curve_path = out_dir / "curve.jsonl"
-    if curve_path.exists():
-        curve_path.unlink()
+    train_log_path = out_dir / "train_log.jsonl"
+    for stale in (curve_path, train_log_path):
+        if stale.exists():
+            stale.unlink()
 
     train_rows = build_train_dataset(records)
     if not train_rows:
@@ -481,6 +506,7 @@ def train_one(
     )
     trainer.train()
     trainer.save_model(str(out_dir / "final"))
+    write_jsonl(train_log_path, train_log_rows(trainer.state.log_history))
 
     curve = read_curve(curve_path)
     payload = results_payload(

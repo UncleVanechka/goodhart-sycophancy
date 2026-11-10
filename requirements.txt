@@ -4,13 +4,13 @@ pandas>=2.2
 pyyaml>=6.0
 tqdm>=4.66
 python-dotenv>=1.0
-torch>=2.4
-transformers>=4.45
-datasets>=3.0
-trl>=0.21
-peft>=0.13
-vllm>=0.6
-accelerate>=1.0
+# GPU stack pinned to the versions every reported run used (recorded by the runner)
+torch==2.6.0
+transformers==5.20.2
+datasets==4.0.0
+trl==0.29.1
+peft==0.21.2
+accelerate==1.15.0
 anthropic>=1.0
 wandb>=0.18
 matplotlib>=3.9

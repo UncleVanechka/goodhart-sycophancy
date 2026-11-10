@@ -245,7 +245,7 @@ shares.
 ## Reproduce
 
 ```bash
-make data       # data/prompts.jsonl (byte-identical to the one used) and SycophancyEval
+make data       # data/prompts.jsonl (byte-identical to the one used), SycophancyEval at a pinned commit
 make baseline   # results/baseline/
 make bon        # results/bon/
 make grpo-all   # results/grpo/: α = 0, 0.3, 0.6 at seeds 42–44, persona mixture at 42–43
@@ -253,10 +253,12 @@ make ci         # results/ci/summary.md
 make plots      # figures/*.png
 ```
 
-The configs in `configs/` are those of the reported runs (local Qwen2.5-7B-Instruct
-judge, `transformers` generation); a test checks them against the config stored in every
-result file. GRPO sampling on the GPU is not bit-reproducible, so a rerun reproduces the
-spread across seeds rather than each run to the digit.
+The configs in `configs/` are those of the reported runs (local Qwen2.5-7B-Instruct judge,
+`transformers` generation), and `requirements.txt` pins the library versions they ran on; a
+test checks the configs against the one stored in every result file. `make grpo-all` does not
+rerun the first-pass α = 0.3 / 0.6 pair, and GRPO sampling on the GPU is not
+bit-reproducible, so a rerun reproduces the spread across seeds rather than each run to the
+digit.
 
 ## References
 

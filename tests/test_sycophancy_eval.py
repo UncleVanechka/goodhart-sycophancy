@@ -1,5 +1,6 @@
 """SycophancyEval loader on a hand-written JSONL; download through a patched urlopen."""
 
+import hashlib
 import io
 import json
 import random
@@ -158,4 +159,29 @@ def test_download_writes_file_and_skips_existing(tmp_path, monkeypatch):
     assert calls == ["http://example/answer.jsonl"]
     se.download("http://example/answer.jsonl", target, force=True)
     assert len(calls) == 2
-    assert se.get_records(target, download_if_missing=True) == []
+    assert se.get_records(target, "http://example/answer.jsonl", download_if_missing=True) == []
+
+
+def test_download_checks_sha256(tmp_path, monkeypatch):
+    class _Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.close()
+
+    monkeypatch.setattr(se.urllib.request, "urlopen", lambda url, timeout=0: _Response(b"x\n"))
+    good = hashlib.sha256(b"x\n").hexdigest()
+    target = tmp_path / "answer.jsonl"
+    assert se.download("http://example/a.jsonl", target, sha256=good) == target
+    with pytest.raises(ValueError, match="sha256"):
+        se.download("http://example/a.jsonl", target, sha256="0" * 64)
+    # the pinned default URL is checked against the hash of the file the runs used
+    with pytest.raises(ValueError, match=se.ANSWER_SHA256):
+        se.download(se.ANSWER_URL, tmp_path / "other.jsonl")
+
+
+def test_default_url_is_pinned_to_a_commit():
+    assert se.ANSWER_COMMIT in se.ANSWER_URL
+    assert "/main/" not in se.ANSWER_URL
+    assert len(se.ANSWER_SHA256) == 64

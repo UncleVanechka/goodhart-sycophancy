@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import json
 import logging
@@ -347,6 +348,30 @@ def test_cache_key_depends_on_every_field():
     assert base != cache_key(a, "p", "r2", "A")
     assert base != cache_key(a, "p", "r", None)
     assert cache_key(a, "p", "r", None) == cache_key(a, "p", "r", "")
+
+
+def test_cache_key_depends_on_judge_and_persona_prompt():
+    a = get_persona("agreeable")
+    base = cache_key(a, "p", "r", "A")
+    assert base != cache_key(a, "p", "r", "A", judge="hf:Qwen/Qwen2.5-7B-Instruct")
+    assert cache_key(a, "p", "r", "A", judge="hf:x") != cache_key(a, "p", "r", "A", judge="vllm:x")
+    edited = dataclasses.replace(a, system_prompt=a.system_prompt + " Be strict.")
+    assert base != cache_key(edited, "p", "r", "A")
+    # fields are separated, so moving text between them changes the key
+    assert cache_key(a, "pr", "", "A") != cache_key(a, "p", "r", "A")
+
+
+def test_cached_backend_does_not_share_scores_across_judges(tmp_path, records):
+    path = tmp_path / "scores.sqlite"
+    persona = get_persona("agreeable")
+    prompt, gold = records[0]["prompt"], records[0]["gold"]
+    first = CachedBackend(StubBackend(), path, judge="hf:judge-a")
+    first.score(persona, prompt, "Answer: A", gold)
+    first.close()
+    other = CachedBackend(StubBackend(), path, judge="anthropic:judge-b")
+    other.score(persona, prompt, "Answer: A", gold)
+    assert len(other.inner.calls) == 1
+    other.close()
 
 
 def test_build_backend(tmp_path):

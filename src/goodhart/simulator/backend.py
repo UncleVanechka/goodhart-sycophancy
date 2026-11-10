@@ -444,18 +444,25 @@ class MockBackend(_ThreadedBackend):
         return self.AGREE if parsed == expected else self.CONTRADICT
 
 
-def cache_key(persona: Persona, prompt: str, response: str, gold: str | None) -> str:
-    """sha256 over persona name, prompt, response and gold."""
-    raw = persona.name + prompt + response + (gold or "")
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+def cache_key(
+    persona: Persona, prompt: str, response: str, gold: str | None, judge: str = ""
+) -> str:
+    """sha256 over the judge identity, the persona (name and prompt), prompt, response and gold.
+
+    ``judge`` names the scoring backend and its model, so switching judges or editing a
+    persona prompt never reuses scores another judge gave.
+    """
+    parts = (judge, persona.name, persona.system_prompt, prompt, response, gold or "")
+    return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
 
 
 class CachedBackend:
     """sqlite cache in front of another backend; misses are scored in one inner batch."""
 
-    def __init__(self, inner: ScoringBackend, path: str | Path) -> None:
+    def __init__(self, inner: ScoringBackend, path: str | Path, judge: str = "") -> None:
         self.inner = inner
         self.path = Path(path)
+        self.judge = judge
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
@@ -489,7 +496,8 @@ class CachedBackend:
     ) -> list[float]:
         golds = list(golds) if golds is not None else [None] * len(prompts)
         keys = [
-            cache_key(persona, p, r, g) for p, r, g in zip(prompts, responses, golds, strict=True)
+            cache_key(persona, p, r, g, self.judge)
+            for p, r, g in zip(prompts, responses, golds, strict=True)
         ]
         out: list[float | None] = [self._get(k) for k in keys]
         miss = [i for i, v in enumerate(out) if v is None]
@@ -514,6 +522,7 @@ def build_backend(cfg: dict) -> ScoringBackend:
     if "backend" not in cfg and isinstance(cfg.get("simulator"), dict):
         cfg = cfg["simulator"]
     kind = cfg.get("backend", "mock")
+    judge = f"{kind}:{(cfg.get(kind) or {}).get('model', '')}"
     backend: ScoringBackend
     if kind == "anthropic":
         sub = cfg.get("anthropic") or {}
@@ -550,5 +559,5 @@ def build_backend(cfg: dict) -> ScoringBackend:
         raise ValueError(f"unknown simulator backend {kind!r}")
     cache = cfg.get("cache")
     if cache:
-        backend = CachedBackend(backend, cache)
+        backend = CachedBackend(backend, cache, judge=judge)
     return backend

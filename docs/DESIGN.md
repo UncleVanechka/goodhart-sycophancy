@@ -230,8 +230,9 @@ Matplotlib only; no seaborn.
   the stage config and expands `${ENV_VAR}` strings.
 - `goodhart.config.set_seed(seed)` seeds `random`, `numpy`, and `torch` if
   importable.
-- Every results JSON stores the full resolved config and `git_commit`
-  (`git rev-parse HEAD`, or `null` outside a repo).
+- Every results JSON stores the resolved stage config and `git_commit`
+  (`git rev-parse HEAD`, or `null` outside a repo); the judge config is stored as the
+  path of `configs/simulator.yaml`, not its contents.
 
 ## 13. Tests
 

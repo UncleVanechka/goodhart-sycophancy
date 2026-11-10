@@ -155,7 +155,7 @@ def _summary(metrics: dict[str, float]) -> str:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="configs/bon.yaml")
+    parser.add_argument("--config", default="configs/baseline.yaml")
     parser.add_argument("--no-proxy", action="store_true", help="skip the simulator rating")
     args = parser.parse_args(argv)
     load_dotenv_if_present()

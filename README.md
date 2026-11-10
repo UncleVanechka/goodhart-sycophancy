@@ -66,8 +66,9 @@ src/goodhart/
 docs/DESIGN.md    data schema and module interfaces
 docs/ROADMAP.md   plan, flow diagrams, results so far, timeline
 docs/WRITEUP.md   the write-up (draft)
+docs/JUDGE_CHECK.md  the user-simulator check
 tests/            unit tests, no GPU and no network
-results/          JSON outputs; baseline/, bon/, grpo/ summaries and curves are committed, samples and checkpoints are not
+results/          JSON outputs; baseline/, bon/, grpo/, grpo_first_pass/, grpo_smoke/, ci/ and judge_check/ are committed, samples and checkpoints are not
 figures/          plots; the PNGs rendered from the committed results are tracked
 ```
 
@@ -75,25 +76,36 @@ figures/          plots; the PNGs rendered from the committed results are tracke
 
 ```bash
 python3.11 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt -e .
-make test                        # unit tests, CPU only; includes a check that configs/ matches the reported runs
+pip install -r requirements.txt -r requirements-dev.txt -e .
+make test                        # unit tests, CPU only; includes the configs check below
 
 make data                        # prompts -> data/prompts.jsonl, SycophancyEval -> data/sycophancy_eval/
 make baseline                    # experiment 1 (GPU)
 make bon                         # experiment 2 + BoN mitigation (GPU)
-make grpo-all                    # experiments 3-4: every GRPO run in the write-up, ~75 GPU-hours
+make grpo-all                    # experiments 3-4: every run under results/grpo/, ~61 GPU-hours
 make ci                          # results/ci/summary.md
 make plots                       # figures/*.png
 ```
 
-One GRPO run at a time: `make grpo`, `make grpo-mitigation` or `make grpo-persona-mix`,
-with `SEED=43` for another seed. The configs in `configs/` are the ones the reported runs
-used, with the local Qwen2.5-7B-Instruct judge; `tests/test_reported_configs.py` checks them
-against the config stored in every committed result file. `make data` rebuilds the exact
-`data/prompts.jsonl` the runs used. GRPO sampling on the GPU is not bit-reproducible, so a
-rerun reproduces the spread across seeds, not each run to the digit. The Anthropic or vLLM
-judge is one line in `configs/simulator.yaml` (`cp .env.example .env` for the API key);
-W&B logging is `wandb.mode` in `configs/base.yaml`.
+The configs in `configs/` are the ones the reported runs used, and `requirements.txt` pins
+the GPU stack they ran on (torch 2.6.0, transformers 5.20.2, TRL 0.29.1, PEFT 0.21.2).
+`tests/test_reported_configs.py` rebuilds the stage config of every committed result from
+`configs/` and compares it with the stored one; results keep only the path of the judge
+config, so the judge settings are pinned to the write-up's (local Qwen2.5-7B-Instruct)
+separately. `make data` rebuilds the exact `data/prompts.jsonl` the runs used and fetches
+SycophancyEval from a fixed upstream commit, checked by sha256. `make grpo-all` reruns 11 of
+the 13 GRPO runs; the first-pass α = 0.3 / 0.6 pair in `results/grpo_first_pass/` ran the same
+config on earlier evaluation code and is not rerun. GRPO sampling on the GPU is not
+bit-reproducible, so a rerun reproduces the spread across seeds, not each run to the digit.
+
+One target at a time: `make grpo` (α = 0), `make grpo-mitigation` (α = 0.3 and 0.6 in one
+call) or `make grpo-persona-mix`, with `SEED=43` for another seed. Other judges: `backend:
+anthropic` in `configs/simulator.yaml` with `ANTHROPIC_API_KEY` in `.env` (`cp .env.example
+.env`), or `backend: vllm` with an OpenAI-compatible server at `VLLM_BASE_URL`; the score
+cache is keyed by judge, so switching never reuses another judge's scores. vLLM generation
+(`requirements-vllm.txt`) is `generation.backend: vllm` in the Best-of-N and baseline configs
+and `grpo.use_vllm: true` in the GRPO ones. W&B logging is `wandb.mode` in
+`configs/base.yaml`.
 
 ## Stack
 
@@ -126,7 +138,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
 - [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
-- [x] Every reported run reproducible from `configs/` with `make` (checked by `tests/test_reported_configs.py`)
+- [x] Every run in results/baseline, bon and grpo reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
 - [ ] Write-up — draft in docs/WRITEUP.md (~1 850 words), final by Nov 17
 
 ## References

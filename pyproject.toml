@@ -20,14 +20,15 @@ dependencies = [
 [project.optional-dependencies]
 # Everything needed to run experiments on a GPU box
 gpu = [
-    "torch>=2.4",
-    "transformers>=4.45",
-    "datasets>=3.0",
-    "trl>=0.21",
-    "peft>=0.13",
-    "vllm>=0.6",
-    "accelerate>=1.0",
+    "torch==2.6.0",
+    "transformers==5.20.2",
+    "datasets==4.0.0",
+    "trl==0.29.1",
+    "peft==0.21.2",
+    "accelerate==1.15.0",
 ]
+# vLLM generation and the vLLM judge; not used by the reported runs
+vllm = ["vllm>=0.6"]
 # User simulator through the Anthropic API
 anthropic = ["anthropic>=1.0"]
 # Tracking and plots

@@ -285,3 +285,15 @@ def test_evaluate_records_rejects_misaligned_judge(records):
         tg.evaluate_records(
             _stub_generate(records), records, stub_reward, stub_parse, {"bad": lambda r, t: [1.0]}
         )
+
+
+def test_train_log_rows_keeps_training_steps_and_known_keys():
+    history = [
+        {"step": 5, "reward": 7.4, "kl": 0.001, "completions/mean_length": 66.6, "epoch": 0.1},
+        {"step": 10, "reward": 7.5, "kl": 0.002, "loss": 0.0, "grad_norm": 0.3},
+        {"step": 300, "train_runtime": 1.0, "train_loss": 0.0},
+    ]
+    assert tg.train_log_rows(history) == [
+        {"step": 5, "reward": 7.4, "kl": 0.001, "completions/mean_length": 66.6},
+        {"step": 10, "reward": 7.5, "kl": 0.002},
+    ]

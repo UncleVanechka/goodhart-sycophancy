@@ -22,6 +22,7 @@ checkpoints/
 outputs/
 wandb/
 results/*
+!results/analysis/
 !results/.gitkeep
 !results/baseline/
 !results/bon/

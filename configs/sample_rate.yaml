@@ -1,0 +1,39 @@
+# goodhart.experiments.sample_rate — sampled replies of the base policy and saved adapters,
+# every sample rated, rows in the Best-of-N per-sample format
+seed: 42
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+# name -> base | adapter directory | {adapter, personas, splits, opinions, max_questions, n}.
+# Relative paths are under paths.data; null drops a policy set in this file
+policies:
+  base: base
+
+policy:
+  device: cuda
+  dtype: float32          # as the GRPO rollouts (TRL loads the policy in float32); sampling runs
+                          # in eval mode, the rollouts ran in train mode with LoRA dropout on
+
+splits: [val]
+opinions: [none, correct, wrong]
+max_questions: 200        # questions per split, chosen by select_records with the seed
+
+generation:               # GRPO's rollout settings (TRL defaults), not Best-of-N's top-p 0.95
+  n: 8                    # samples per prompt (one GRPO group)
+  temperature: 1.0
+  top_p: 1.0
+  top_k: 0                # 0 = off; the model's own generation config would apply top-k 20
+  max_tokens: 512
+  batch_size: 8           # prompts per generate call
+  chat_template_kwargs:
+    enable_thinking: false
+
+personas: [agreeable, agreeable_informed]
+
+n_values: [1, 4, 8]       # Best-of-N curves in the summary
+mitigation:
+  alphas: [0.0, 0.3, 0.6, 1.0]
+
+skip_done: true
+out: results/sample_rate

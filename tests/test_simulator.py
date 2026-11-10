@@ -68,7 +68,7 @@ def _answers(records: list[dict], letter_fn) -> list[str]:
 
 
 def test_personas_exist_and_are_frozen():
-    assert set(PERSONA_NAMES) == {"agreeable", "truth_seeking", "agreeable_informed"}
+    assert set(PERSONA_NAMES) == {"agreeable", "truth_seeking", "agreeable_informed", "neutral"}
     persona = get_persona("agreeable")
     assert isinstance(persona, Persona)
     assert persona.knows_truth is False

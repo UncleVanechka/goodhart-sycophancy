@@ -1,0 +1,1400 @@
+{
+  "inputs": {
+    "runs": [
+      "grpo/grpo-immediate",
+      "grpo/grpo-immediate-s43",
+      "grpo/grpo-immediate-s44",
+      "grpo/grpo-delayed-a0.3",
+      "grpo_first_pass/grpo-delayed-a0.3",
+      "grpo/grpo-delayed-s43-a0.3",
+      "grpo/grpo-delayed-s44-a0.3",
+      "grpo/grpo-delayed-a0.6",
+      "grpo_first_pass/grpo-delayed-a0.6",
+      "grpo/grpo-delayed-s43-a0.6",
+      "grpo/grpo-delayed-s44-a0.6",
+      "grpo/grpo-persona-mix",
+      "grpo/grpo-persona-mix-s43"
+    ],
+    "bon_samples": [
+      "qwen3-1.7b_samples.jsonl",
+      "qwen3-4b_samples.jsonl"
+    ]
+  },
+  "definitions": {
+    "grpo": "last evaluation minus step 0, validation prompts; runs without the proxy (first pass) excluded",
+    "share_of_change": "change@type * n@type / (overall change * n); null when |overall change| < 0.1; condition shares from mean changes",
+    "bon": "expected Best-of-64 pick minus a random sample, test prompts",
+    "kept_vs_alpha_0": "overall proxy change / that of alpha = 0"
+  },
+  "runs": {
+    "grpo/grpo-immediate": {
+      "condition": "alpha=0",
+      "seed": 42,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.52,
+            "change": 0.4399999999999995
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.78,
+            "change": 0.8199999999999985
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 8.24,
+            "change": 1.913333333333333
+          }
+        },
+        "overall_change": 1.057777777777777,
+        "share_of_change": {
+          "none": 0.1386554621848739,
+          "correct": 0.2584033613445375,
+          "wrong": 0.6029411764705885
+        }
+      },
+      "informed_mean": null
+    },
+    "grpo/grpo-immediate-s43": {
+      "condition": "alpha=0",
+      "seed": 43,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.166666666666666,
+            "change": 0.086666666666666
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.523333333333333,
+            "change": 0.5633333333333326
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 7.503333333333333,
+            "change": 1.1766666666666659
+          }
+        },
+        "overall_change": 0.608888888888889,
+        "share_of_change": {
+          "none": 0.047445255474452254,
+          "correct": 0.3083941605839416,
+          "wrong": 0.6441605839416062
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 8.133333333333333,
+            "change": 0.3266666666666662
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 9.07,
+            "change": 0.38333333333333286
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 3.203333333333333,
+            "change": -2.8966666666666665
+          }
+        },
+        "overall_change": -0.7288888888888891,
+        "share_of_change": {
+          "none": -0.14939024390243877,
+          "correct": -0.1753048780487802,
+          "wrong": 1.324695121951219
+        }
+      }
+    },
+    "grpo/grpo-immediate-s44": {
+      "condition": "alpha=0",
+      "seed": 44,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 7.966666666666667,
+            "change": -0.11333333333333329
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.606666666666667,
+            "change": 0.6466666666666665
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 7.54,
+            "change": 1.213333333333333
+          }
+        },
+        "overall_change": 0.5822222222222218,
+        "share_of_change": {
+          "none": -0.0648854961832061,
+          "correct": 0.37022900763358785,
+          "wrong": 0.6946564885496184
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 7.556666666666667,
+            "change": -0.25
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 9.056666666666667,
+            "change": 0.3699999999999992
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 2.5166666666666666,
+            "change": -3.583333333333333
+          }
+        },
+        "overall_change": -1.1544444444444446,
+        "share_of_change": {
+          "none": 0.07218479307025985,
+          "correct": -0.10683349374398436,
+          "wrong": 1.0346487006737246
+        }
+      }
+    },
+    "grpo/grpo-delayed-a0.3": {
+      "condition": "alpha=0.3",
+      "seed": 42,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.366666666666667,
+            "change": 0.28666666666666707
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.663333333333334,
+            "change": 0.7033333333333331
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 7.583333333333333,
+            "change": 1.256666666666666
+          }
+        },
+        "overall_change": 0.7488888888888896,
+        "share_of_change": {
+          "none": 0.12759643916913968,
+          "correct": 0.3130563798219585,
+          "wrong": 0.5593471810089019
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 7.03,
+            "change": -0.7766666666666664
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 9.286666666666667,
+            "change": 0.5999999999999996
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 2.57,
+            "change": -3.53
+          }
+        },
+        "overall_change": -1.235555555555556,
+        "share_of_change": {
+          "none": 0.20953237410071934,
+          "correct": -0.1618705035971222,
+          "wrong": 0.9523381294964028
+        }
+      }
+    },
+    "grpo/grpo-delayed-s43-a0.3": {
+      "condition": "alpha=0.3",
+      "seed": 43,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.503333333333334,
+            "change": 0.4233333333333338
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.206666666666667,
+            "change": 0.24666666666666615
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 7.13,
+            "change": 0.8033333333333328
+          }
+        },
+        "overall_change": 0.4911111111111106,
+        "share_of_change": {
+          "none": 0.28733031674208187,
+          "correct": 0.16742081447963772,
+          "wrong": 0.5452488687782804
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 8.14,
+            "change": 0.3333333333333339
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 9.0,
+            "change": 0.3133333333333326
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 5.34,
+            "change": -0.7599999999999998
+          }
+        },
+        "overall_change": -0.037777777777778354,
+        "share_of_change": {
+          "none": null,
+          "correct": null,
+          "wrong": null
+        }
+      }
+    },
+    "grpo/grpo-delayed-s44-a0.3": {
+      "condition": "alpha=0.3",
+      "seed": 44,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.196666666666667,
+            "change": 0.11666666666666714
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.27,
+            "change": 0.3099999999999987
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 7.05,
+            "change": 0.7233333333333327
+          }
+        },
+        "overall_change": 0.38333333333333375,
+        "share_of_change": {
+          "none": 0.10144927536231937,
+          "correct": 0.26956521739130357,
+          "wrong": 0.628985507246377
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 7.963333333333333,
+            "change": 0.1566666666666663
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 8.873333333333333,
+            "change": 0.18666666666666565
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 5.406666666666666,
+            "change": -0.6933333333333334
+          }
+        },
+        "overall_change": -0.11666666666666714,
+        "share_of_change": {
+          "none": -0.4476190476190447,
+          "correct": -0.5333333333333282,
+          "wrong": 1.9809523809523728
+        }
+      }
+    },
+    "grpo/grpo-delayed-a0.6": {
+      "condition": "alpha=0.6",
+      "seed": 42,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.35,
+            "change": 0.2699999999999996
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 8.563333333333333,
+            "change": -0.3966666666666683
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 6.663333333333333,
+            "change": 0.336666666666666
+          }
+        },
+        "overall_change": 0.07000000000000028,
+        "share_of_change": {
+          "none": null,
+          "correct": null,
+          "wrong": null
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 8.326666666666666,
+            "change": 0.5199999999999996
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 8.903333333333334,
+            "change": 0.21666666666666679
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 7.416666666666667,
+            "change": 1.3166666666666673
+          }
+        },
+        "overall_change": 0.684444444444444,
+        "share_of_change": {
+          "none": 0.253246753246753,
+          "correct": 0.10551948051948054,
+          "wrong": 0.6412337662337664
+        }
+      }
+    },
+    "grpo/grpo-delayed-s43-a0.6": {
+      "condition": "alpha=0.6",
+      "seed": 43,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.373333333333333,
+            "change": 0.293333333333333
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 8.713333333333333,
+            "change": -0.24666666666666792
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 6.623333333333333,
+            "change": 0.29666666666666597
+          }
+        },
+        "overall_change": 0.11444444444444457,
+        "share_of_change": {
+          "none": 0.8543689320388397,
+          "correct": -0.7184466019417559,
+          "wrong": 0.8640776699029162
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 8.15,
+            "change": 0.3433333333333337
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 8.89,
+            "change": 0.20333333333333314
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 7.073333333333333,
+            "change": 0.9733333333333336
+          }
+        },
+        "overall_change": 0.5066666666666668,
+        "share_of_change": {
+          "none": 0.22587719298245634,
+          "correct": 0.13377192982456124,
+          "wrong": 0.6403508771929824
+        }
+      }
+    },
+    "grpo/grpo-delayed-s44-a0.6": {
+      "condition": "alpha=0.6",
+      "seed": 44,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.13,
+            "change": 0.05000000000000071
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.103333333333333,
+            "change": 0.14333333333333265
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 6.1033333333333335,
+            "change": -0.2233333333333336
+          }
+        },
+        "overall_change": -0.009999999999999787,
+        "share_of_change": {
+          "none": null,
+          "correct": null,
+          "wrong": null
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 7.793333333333333,
+            "change": -0.013333333333333641
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 8.813333333333333,
+            "change": 0.12666666666666515
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 5.88,
+            "change": -0.21999999999999975
+          }
+        },
+        "overall_change": -0.035555555555555785,
+        "share_of_change": {
+          "none": null,
+          "correct": null,
+          "wrong": null
+        }
+      }
+    },
+    "grpo/grpo-persona-mix": {
+      "condition": "persona_mix",
+      "seed": 42,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.623333333333333,
+            "change": 0.543333333333333
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.043333333333333,
+            "change": 0.08333333333333215
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 7.08,
+            "change": 0.753333333333333
+          }
+        },
+        "overall_change": 0.45999999999999996,
+        "share_of_change": {
+          "none": 0.3937198067632853,
+          "correct": 0.06038647342995092,
+          "wrong": 0.5458937198067637
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 8.27,
+            "change": 0.46333333333333293
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 8.886666666666667,
+            "change": 0.1999999999999993
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 6.086666666666667,
+            "change": -0.013333333333332753
+          }
+        },
+        "overall_change": 0.2166666666666659,
+        "share_of_change": {
+          "none": 0.7128205128205128,
+          "correct": 0.3076923076923069,
+          "wrong": -0.02051282051281964
+        }
+      }
+    },
+    "grpo/grpo-persona-mix-s43": {
+      "condition": "persona_mix",
+      "seed": 43,
+      "step": 300,
+      "proxy_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 8.08,
+            "end": 8.18,
+            "change": 0.09999999999999964
+          },
+          "correct": {
+            "start": 8.96,
+            "end": 9.046666666666667,
+            "change": 0.086666666666666
+          },
+          "wrong": {
+            "start": 6.326666666666667,
+            "end": 6.8566666666666665,
+            "change": 0.5299999999999994
+          }
+        },
+        "overall_change": 0.23888888888888982,
+        "share_of_change": {
+          "none": 0.13953488372093006,
+          "correct": 0.1209302325581389,
+          "wrong": 0.739534883720931
+        }
+      },
+      "informed_mean": {
+        "by_opinion": {
+          "none": {
+            "start": 7.806666666666667,
+            "end": 7.926666666666667,
+            "change": 0.1200000000000001
+          },
+          "correct": {
+            "start": 8.686666666666667,
+            "end": 8.78,
+            "change": 0.09333333333333194
+          },
+          "wrong": {
+            "start": 6.1,
+            "end": 6.49,
+            "change": 0.39000000000000057
+          }
+        },
+        "overall_change": 0.20111111111111057,
+        "share_of_change": {
+          "none": 0.1988950276243098,
+          "correct": 0.15469613259668297,
+          "wrong": 0.6464088397790073
+        }
+      }
+    }
+  },
+  "conditions": {
+    "alpha=0": {
+      "proxy_mean": {
+        "n_runs": 3,
+        "overall_change": {
+          "mean": 0.7496296296296293,
+          "n_runs": 3,
+          "ci": [
+            0.5822222222222218,
+            1.057777777777777
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.13777777777777742,
+            "n_runs": 3,
+            "ci": [
+              -0.11333333333333329,
+              0.4399999999999995
+            ]
+          },
+          "correct": {
+            "mean": 0.6766666666666659,
+            "n_runs": 3,
+            "ci": [
+              0.5633333333333326,
+              0.8199999999999985
+            ]
+          },
+          "wrong": {
+            "mean": 1.434444444444444,
+            "n_runs": 3,
+            "ci": [
+              1.1766666666666659,
+              1.913333333333333
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": 0.061264822134387234,
+          "correct": 0.3008893280632409,
+          "wrong": 0.6378458498023718
+        },
+        "kept_vs_alpha_0": 1.0
+      },
+      "informed_mean": {
+        "n_runs": 2,
+        "overall_change": {
+          "mean": -0.9416666666666669,
+          "n_runs": 2,
+          "ci": [
+            -1.1544444444444446,
+            -0.7288888888888891
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.03833333333333311,
+            "n_runs": 2,
+            "ci": [
+              -0.25,
+              0.3266666666666662
+            ]
+          },
+          "correct": {
+            "mean": 0.37666666666666604,
+            "n_runs": 2,
+            "ci": [
+              0.3699999999999992,
+              0.38333333333333286
+            ]
+          },
+          "wrong": {
+            "mean": -3.2399999999999998,
+            "n_runs": 2,
+            "ci": [
+              -3.583333333333333,
+              -2.8966666666666665
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": -0.01356932153392322,
+          "correct": -0.13333333333333308,
+          "wrong": 1.1469026548672563
+        }
+      }
+    },
+    "alpha=0.3": {
+      "proxy_mean": {
+        "n_runs": 3,
+        "overall_change": {
+          "mean": 0.5411111111111113,
+          "n_runs": 3,
+          "ci": [
+            0.38333333333333375,
+            0.7488888888888896
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.275555555555556,
+            "n_runs": 3,
+            "ci": [
+              0.11666666666666714,
+              0.4233333333333338
+            ]
+          },
+          "correct": {
+            "mean": 0.4199999999999993,
+            "n_runs": 3,
+            "ci": [
+              0.24666666666666615,
+              0.7033333333333331
+            ]
+          },
+          "wrong": {
+            "mean": 0.9277777777777771,
+            "n_runs": 3,
+            "ci": [
+              0.7233333333333327,
+              1.256666666666666
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": 0.16974674880219065,
+          "correct": 0.2587268993839833,
+          "wrong": 0.571526351813826
+        },
+        "kept_vs_alpha_0": 0.7218379446640322
+      },
+      "informed_mean": {
+        "n_runs": 3,
+        "overall_change": {
+          "mean": -0.4633333333333338,
+          "n_runs": 3,
+          "ci": [
+            -1.235555555555556,
+            -0.037777777777778354
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": -0.0955555555555554,
+            "n_runs": 3,
+            "ci": [
+              -0.7766666666666664,
+              0.3333333333333339
+            ]
+          },
+          "correct": {
+            "mean": 0.366666666666666,
+            "n_runs": 3,
+            "ci": [
+              0.18666666666666565,
+              0.5999999999999996
+            ]
+          },
+          "wrong": {
+            "mean": -1.6611111111111108,
+            "n_runs": 3,
+            "ci": [
+              -3.53,
+              -0.6933333333333334
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": 0.06874500399680243,
+          "correct": -0.2637889688249395,
+          "wrong": 1.1950439648281372
+        }
+      }
+    },
+    "alpha=0.6": {
+      "proxy_mean": {
+        "n_runs": 3,
+        "overall_change": {
+          "mean": 0.05814814814814836,
+          "n_runs": 3,
+          "ci": [
+            -0.009999999999999787,
+            0.11444444444444457
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.20444444444444443,
+            "n_runs": 3,
+            "ci": [
+              0.05000000000000071,
+              0.293333333333333
+            ]
+          },
+          "correct": {
+            "mean": -0.16666666666666785,
+            "n_runs": 3,
+            "ci": [
+              -0.3966666666666683,
+              0.14333333333333265
+            ]
+          },
+          "wrong": {
+            "mean": 0.13666666666666613,
+            "n_runs": 3,
+            "ci": [
+              -0.2233333333333336,
+              0.336666666666666
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": null,
+          "correct": null,
+          "wrong": null
+        },
+        "kept_vs_alpha_0": 0.07756916996047462
+      },
+      "informed_mean": {
+        "n_runs": 3,
+        "overall_change": {
+          "mean": 0.385185185185185,
+          "n_runs": 3,
+          "ci": [
+            -0.035555555555555785,
+            0.684444444444444
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.2833333333333332,
+            "n_runs": 3,
+            "ci": [
+              -0.013333333333333641,
+              0.5199999999999996
+            ]
+          },
+          "correct": {
+            "mean": 0.1822222222222217,
+            "n_runs": 3,
+            "ci": [
+              0.12666666666666515,
+              0.21666666666666679
+            ]
+          },
+          "wrong": {
+            "mean": 0.6900000000000004,
+            "n_runs": 3,
+            "ci": [
+              -0.21999999999999975,
+              1.3166666666666673
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": 0.24519230769230763,
+          "correct": 0.15769230769230727,
+          "wrong": 0.597115384615385
+        }
+      }
+    },
+    "persona_mix": {
+      "proxy_mean": {
+        "n_runs": 2,
+        "overall_change": {
+          "mean": 0.3494444444444449,
+          "n_runs": 2,
+          "ci": [
+            0.23888888888888982,
+            0.45999999999999996
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.3216666666666663,
+            "n_runs": 2,
+            "ci": [
+              0.09999999999999964,
+              0.543333333333333
+            ]
+          },
+          "correct": {
+            "mean": 0.08499999999999908,
+            "n_runs": 2,
+            "ci": [
+              0.08333333333333215,
+              0.086666666666666
+            ]
+          },
+          "wrong": {
+            "mean": 0.6416666666666662,
+            "n_runs": 2,
+            "ci": [
+              0.5299999999999994,
+              0.753333333333333
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": 0.3068362480127188,
+          "correct": 0.08108108108108034,
+          "wrong": 0.6120826709062008
+        },
+        "kept_vs_alpha_0": 0.4661561264822142
+      },
+      "informed_mean": {
+        "n_runs": 2,
+        "overall_change": {
+          "mean": 0.20888888888888824,
+          "n_runs": 2,
+          "ci": [
+            0.20111111111111057,
+            0.2166666666666659
+          ]
+        },
+        "by_opinion": {
+          "none": {
+            "mean": 0.2916666666666665,
+            "n_runs": 2,
+            "ci": [
+              0.1200000000000001,
+              0.46333333333333293
+            ]
+          },
+          "correct": {
+            "mean": 0.1466666666666656,
+            "n_runs": 2,
+            "ci": [
+              0.09333333333333194,
+              0.1999999999999993
+            ]
+          },
+          "wrong": {
+            "mean": 0.1883333333333339,
+            "n_runs": 2,
+            "ci": [
+              -0.013333333333332753,
+              0.39000000000000057
+            ]
+          }
+        },
+        "share_of_change": {
+          "none": 0.46542553191489383,
+          "correct": 0.23404255319148792,
+          "wrong": 0.30053191489361825
+        }
+      }
+    }
+  },
+  "bon": {
+    "qwen3-1.7b": {
+      "model": "qwen3-1.7b",
+      "n": 64,
+      "alphas": {
+        "alpha=0": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29734375,
+                "best_of_n": 9.01,
+                "change": 0.7126562500000002
+              },
+              "correct": {
+                "random_sample": 9.1959375,
+                "best_of_n": 9.575,
+                "change": 0.37906249999999986
+              },
+              "wrong": {
+                "random_sample": 6.425,
+                "best_of_n": 7.88,
+                "change": 1.455
+              }
+            },
+            "overall_change": 0.8489062500000006,
+            "share_of_change": {
+              "none": 0.279833118596233,
+              "correct": 0.14884348733051103,
+              "wrong": 0.571323394073256
+            },
+            "kept_vs_alpha_0": 1.0
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29015625,
+                "best_of_n": 8.718180477745172,
+                "change": 0.4280242277451709
+              },
+              "correct": {
+                "random_sample": 8.946171875,
+                "best_of_n": 9.081900375617934,
+                "change": 0.13572850061793496
+              },
+              "wrong": {
+                "random_sample": 6.183984375,
+                "best_of_n": 6.057444600907522,
+                "change": -0.1265397740924774
+              }
+            },
+            "overall_change": 0.145737651423544,
+            "share_of_change": {
+              "none": 0.978983407431771,
+              "correct": 0.3104402540962247,
+              "wrong": -0.28942366152799565
+            }
+          }
+        },
+        "alpha=0.3": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29734375,
+                "best_of_n": 8.99,
+                "change": 0.6926562500000006
+              },
+              "correct": {
+                "random_sample": 9.1959375,
+                "best_of_n": 9.57,
+                "change": 0.37406250000000085
+              },
+              "wrong": {
+                "random_sample": 6.425,
+                "best_of_n": 7.795,
+                "change": 1.37
+              }
+            },
+            "overall_change": 0.8122395833333336,
+            "share_of_change": {
+              "none": 0.2842577749278616,
+              "correct": 0.1535107406219945,
+              "wrong": 0.5622314844501439
+            },
+            "kept_vs_alpha_0": 0.9568071660838083
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29015625,
+                "best_of_n": 8.995,
+                "change": 0.7048437499999984
+              },
+              "correct": {
+                "random_sample": 8.946171875,
+                "best_of_n": 9.275,
+                "change": 0.32882812500000114
+              },
+              "wrong": {
+                "random_sample": 6.183984375,
+                "best_of_n": 6.86,
+                "change": 0.6760156250000007
+              }
+            },
+            "overall_change": 0.5698958333333337,
+            "share_of_change": {
+              "none": 0.41226466825077585,
+              "correct": 0.1923322975690008,
+              "wrong": 0.3954030341802233
+            }
+          }
+        },
+        "alpha=0.6": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29734375,
+                "best_of_n": 8.95,
+                "change": 0.6526562499999997
+              },
+              "correct": {
+                "random_sample": 9.1959375,
+                "best_of_n": 9.54,
+                "change": 0.3440624999999997
+              },
+              "wrong": {
+                "random_sample": 6.425,
+                "best_of_n": 7.289915254237289,
+                "change": 0.8649152542372889
+              }
+            },
+            "overall_change": 0.6205446680790967,
+            "share_of_change": {
+              "none": 0.3505824713743307,
+              "correct": 0.1848174771286272,
+              "wrong": 0.46460005149704214
+            },
+            "kept_vs_alpha_0": 0.7309931668886832
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29015625,
+                "best_of_n": 9.05,
+                "change": 0.7598437499999999
+              },
+              "correct": {
+                "random_sample": 8.946171875,
+                "best_of_n": 9.315,
+                "change": 0.3688281250000003
+              },
+              "wrong": {
+                "random_sample": 6.183984375,
+                "best_of_n": 7.313389830508474,
+                "change": 1.1294054555084747
+              }
+            },
+            "overall_change": 0.7526924435028253,
+            "share_of_change": {
+              "none": 0.336500322523896,
+              "correct": 0.16333724271389208,
+              "wrong": 0.5001624347622119
+            }
+          }
+        },
+        "alpha=1": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29734375,
+                "best_of_n": 8.609202994139816,
+                "change": 0.311859244139816
+              },
+              "correct": {
+                "random_sample": 9.1959375,
+                "best_of_n": 9.345361412846527,
+                "change": 0.14942391284652778
+              },
+              "wrong": {
+                "random_sample": 6.425,
+                "best_of_n": 6.159489492150721,
+                "change": -0.265510507849279
+              }
+            },
+            "overall_change": 0.06525754971235465,
+            "share_of_change": {
+              "none": null,
+              "correct": null,
+              "wrong": null
+            },
+            "kept_vs_alpha_0": 0.07687250472281786
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.29015625,
+                "best_of_n": 9.055,
+                "change": 0.7648437499999989
+              },
+              "correct": {
+                "random_sample": 8.946171875,
+                "best_of_n": 9.315,
+                "change": 0.3688281250000003
+              },
+              "wrong": {
+                "random_sample": 6.183984375,
+                "best_of_n": 7.405,
+                "change": 1.2210156250000006
+              }
+            },
+            "overall_change": 0.7848958333333336,
+            "share_of_change": {
+              "none": 0.32481751824817473,
+              "correct": 0.15663570006635713,
+              "wrong": 0.5185467816854681
+            }
+          }
+        }
+      }
+    },
+    "qwen3-4b": {
+      "model": "qwen3-4b",
+      "n": 64,
+      "alphas": {
+        "alpha=0": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.677734375,
+                "best_of_n": 9.325,
+                "change": 0.6472656249999993
+              },
+              "correct": {
+                "random_sample": 8.618671875,
+                "best_of_n": 9.255,
+                "change": 0.6363281250000004
+              },
+              "wrong": {
+                "random_sample": 6.90546875,
+                "best_of_n": 8.485,
+                "change": 1.5795312499999996
+              }
+            },
+            "overall_change": 0.9543750000000006,
+            "share_of_change": {
+              "none": 0.22606963545077474,
+              "correct": 0.2222495088408646,
+              "wrong": 0.5516808557083607
+            },
+            "kept_vs_alpha_0": 1.0
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 9.19546875,
+                "best_of_n": 9.416922739513463,
+                "change": 0.2214539895134635
+              },
+              "correct": {
+                "random_sample": 9.135703125,
+                "best_of_n": 9.30789950344481,
+                "change": 0.17219637844481106
+              },
+              "wrong": {
+                "random_sample": 8.02515625,
+                "best_of_n": 8.05744489343412,
+                "change": 0.032288643434119635
+              }
+            },
+            "overall_change": 0.1419796704641314,
+            "share_of_change": {
+              "none": 0.5199194804663011,
+              "correct": 0.404274729102416,
+              "wrong": 0.07580579043128285
+            }
+          }
+        },
+        "alpha=0.3": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.677734375,
+                "best_of_n": 9.325,
+                "change": 0.6472656249999993
+              },
+              "correct": {
+                "random_sample": 8.618671875,
+                "best_of_n": 9.255,
+                "change": 0.6363281250000004
+              },
+              "wrong": {
+                "random_sample": 6.90546875,
+                "best_of_n": 8.46,
+                "change": 1.554531250000001
+              }
+            },
+            "overall_change": 0.9460416666666678,
+            "share_of_change": {
+              "none": 0.22806099977978384,
+              "correct": 0.22420722307861707,
+              "wrong": 0.5477317771415989
+            },
+            "kept_vs_alpha_0": 0.9912682820344908
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 9.19546875,
+                "best_of_n": 9.83,
+                "change": 0.6345312500000002
+              },
+              "correct": {
+                "random_sample": 9.135703125,
+                "best_of_n": 9.65,
+                "change": 0.5142968750000012
+              },
+              "wrong": {
+                "random_sample": 8.02515625,
+                "best_of_n": 8.72,
+                "change": 0.6948437500000004
+              }
+            },
+            "overall_change": 0.6145572916666673,
+            "share_of_change": {
+              "none": 0.34416712572566616,
+              "correct": 0.27895249798720323,
+              "wrong": 0.37688037628713067
+            }
+          }
+        },
+        "alpha=0.6": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.677734375,
+                "best_of_n": 9.305,
+                "change": 0.6272656249999997
+              },
+              "correct": {
+                "random_sample": 8.618671875,
+                "best_of_n": 9.215,
+                "change": 0.5963281249999994
+              },
+              "wrong": {
+                "random_sample": 6.90546875,
+                "best_of_n": 8.28,
+                "change": 1.3745312499999995
+              }
+            },
+            "overall_change": 0.8660416666666677,
+            "share_of_change": {
+              "none": 0.24143011787346644,
+              "correct": 0.2295224921818618,
+              "wrong": 0.5290473899446716
+            },
+            "kept_vs_alpha_0": 0.9074437895655976
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 9.19546875,
+                "best_of_n": 9.86,
+                "change": 0.6645312499999996
+              },
+              "correct": {
+                "random_sample": 9.135703125,
+                "best_of_n": 9.695,
+                "change": 0.5592968750000011
+              },
+              "wrong": {
+                "random_sample": 8.02515625,
+                "best_of_n": 8.955,
+                "change": 0.9298437499999999
+              }
+            },
+            "overall_change": 0.7178906250000008,
+            "share_of_change": {
+              "none": 0.308557333043131,
+              "correct": 0.259694562339029,
+              "wrong": 0.43174810461783997
+            }
+          }
+        },
+        "alpha=1": {
+          "proxy_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 8.677734375,
+                "best_of_n": 8.950679016011286,
+                "change": 0.2729446410112857
+              },
+              "correct": {
+                "random_sample": 8.618671875,
+                "best_of_n": 8.894324760661926,
+                "change": 0.27565288566192514
+              },
+              "wrong": {
+                "random_sample": 6.90546875,
+                "best_of_n": 6.965049519665319,
+                "change": 0.059580769665319444
+              }
+            },
+            "overall_change": 0.20272609877951098,
+            "share_of_change": {
+              "none": 0.4487904988627817,
+              "correct": 0.4532435427595208,
+              "wrong": 0.09796595837769753
+            },
+            "kept_vs_alpha_0": 0.2124176542548902
+          },
+          "informed_mean": {
+            "by_opinion": {
+              "none": {
+                "random_sample": 9.19546875,
+                "best_of_n": 9.87,
+                "change": 0.6745312499999994
+              },
+              "correct": {
+                "random_sample": 9.135703125,
+                "best_of_n": 9.695,
+                "change": 0.5592968750000011
+              },
+              "wrong": {
+                "random_sample": 8.02515625,
+                "best_of_n": 9.045,
+                "change": 1.0198437499999997
+              }
+            },
+            "overall_change": 0.751223958333334,
+            "share_of_change": {
+              "none": 0.2993032204388668,
+              "correct": 0.2481713869726493,
+              "wrong": 0.4525253925884839
+            }
+          }
+        }
+      }
+    }
+  }
+}

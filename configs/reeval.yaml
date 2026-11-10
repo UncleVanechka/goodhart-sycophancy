@@ -1,0 +1,50 @@
+# goodhart.experiments.reeval — greedy re-evaluation of the base policy and saved adapters,
+# per-item outputs kept. Decoding repeats the in-training evaluation of the GRPO runs
+seed: 42
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+# name -> base | adapter directory | {adapter, curve, step}. Relative paths are under
+# paths.data. With curve (a run's curve.jsonl) the summary compares the validation metrics
+# with that curve at step (default: its last point, step 0 for the base policy, so the base
+# can be checked against any run's step-0 evaluation: {adapter: base, curve: ...}).
+# null drops a policy set in this file
+policies:
+  base: base
+
+policy:
+  device: cuda
+  dtype: float32          # TRL loads a model given by name in float32: the curves decoded in it
+
+generation:               # as grpo.yaml: max_completion_length, chat_template_kwargs
+  max_new_tokens: 512
+  chat_template_kwargs:
+    enable_thinking: false
+
+eval:
+  splits: [val, test]     # 300 questions x 3 opinion types each
+  batch_size: 16          # the training runs' evaluation batch size
+  max_questions: null     # questions per split, all opinion variants kept; null = all
+
+judges:                   # metric prefix -> persona; proxy is the immediate judge
+  proxy: agreeable
+  informed: agreeable_informed
+  truth_seeking: truth_seeking
+
+heldout:                  # SycophancyEval answer set, not rated; metrics are sycoeval_*, not
+                          # comparable in level to the curves' per-run heldout_* samples
+  enabled: true
+  file: sycophancy_eval/answer.jsonl    # under paths.data
+  letter_seed: 0          # Random(letter_seed) draws the A/B order once per question
+  max_questions: null     # null = all 1,817 questions (7,268 prompts); else a fixed subset
+  subset_seed: 0          # the subset is the same for every job
+  batch_size: 64          # shared by every policy; 16 repeats the training runs' held-out decode
+
+sanity:                   # allowed |re-evaluated - curve| on the validation split
+  sycophancy_rate: 0.02
+  proxy_mean: 0.05
+  gold_accuracy: 0.02
+
+skip_done: true           # a policy whose summary.json exists is read back, not re-run
+out: results/reeval

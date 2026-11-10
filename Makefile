@@ -6,7 +6,8 @@ CFG ?= configs
 SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
 
-.PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all ci plots clean
+.PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
+	reeval sample-rate rescore ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -49,6 +50,18 @@ grpo-persona-mix:
 grpo-all:
 	for s in 42 43 44; do $(MAKE) grpo SEED=$$s && $(MAKE) grpo-mitigation SEED=$$s || exit 1; done
 	for s in 42 43; do $(MAKE) grpo-persona-mix SEED=$$s || exit 1; done
+
+# Analysis of saved adapters (GPU; the policies and inputs come from the config):
+# greedy re-evaluation with per-item outputs, sampled replies rated per sample, and
+# saved replies re-rated by other judges or personas
+reeval:
+	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval.yaml
+
+sample-rate:
+	$(PY) -m goodhart.experiments.sample_rate --config $(CFG)/sample_rate.yaml
+
+rescore:
+	$(PY) -m goodhart.experiments.rescore --config $(CFG)/rescore.yaml
 
 ci:
 	$(PY) -m goodhart.experiments.confidence

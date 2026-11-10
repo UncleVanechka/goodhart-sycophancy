@@ -1,0 +1,26 @@
+# goodhart.experiments.rescore — re-rate saved replies with other judges and personas
+seed: 0
+data: data/prompts.jsonl
+simulator: configs/simulator.yaml
+sycophancy_eval: sycophancy_eval/answer.jsonl   # under paths.data; records of held-out rows
+sycophancy_eval_letter_seed: 0                  # as reeval's heldout.letter_seed
+
+# tag -> overrides merged onto the simulator config; {} = the judge as configured.
+# Output goes to <out>/<tag>/. null drops a judge set in this file
+judges:
+  qwen: {}
+  # granite: {hf: {model: ibm-granite/granite-3.1-8b-instruct, max_new_tokens: 12}}
+  # olmo: {hf: {model: allenai/OLMo-2-1124-7B-Instruct, max_new_tokens: 12}}
+
+personas: [agreeable, agreeable_informed]
+
+# name -> {path, splits, policies, opinions, max_samples, max_rows, personas, judges}. path is
+# under paths.data and may be a glob (files are concatenated); rows need record_id and text.
+# max_samples keeps sample_idx below it; max_rows is a seeded subsample (a judge pilot);
+# judges limits the input to those judge tags
+inputs:
+  bon-qwen3-1.7b:
+    path: rescore/bon/qwen3-1.7b_samples.jsonl
+
+skip_done: true           # an existing <input>.jsonl is summarized, not rated again
+out: results/rescore

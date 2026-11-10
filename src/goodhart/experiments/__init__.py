@@ -1,5 +1,15 @@
-"""CLI entry points: baseline, best_of_n, train_grpo, plots.
+"""CLI entry points, each a module with ``main()`` taking ``--config``.
 
-Each module exposes ``main()`` taking ``--config`` and writes a results JSON that carries the
-resolved config and the git commit.
+- ``baseline``, ``best_of_n``, ``train_grpo``: the experiments (greedy baseline, Best-of-N
+  selection, GRPO training with and without the mitigation);
+- ``reeval``: greedy re-evaluation of the base policy and saved adapters with per-item outputs
+  and a check against the training curves;
+- ``sample_rate``: sampled replies of the base policy and saved adapters with GRPO's rollout
+  settings, every sample rated;
+- ``rescore``: saved replies re-rated by other judges or personas, plus the rating helpers the
+  two stages above share;
+- ``confidence`` and ``plots``: intervals and figures from ``results/`` (no ``--config``).
+
+The experiment and analysis stages write a results JSON that carries the resolved config and
+the git commit.
 """

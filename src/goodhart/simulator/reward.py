@@ -1,10 +1,12 @@
-"""Reward functions on the 1-10 scale: immediate, delayed (informed judge) and persona mixture."""
+"""Reward functions on the 1-10 scale: immediate, delayed (informed judge) and persona mixture,
+each optionally with a floor that gives short replies a fixed reward."""
 
 from __future__ import annotations
 
 import random
 from collections import defaultdict
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 
 from goodhart.simulator.backend import ScoringBackend
 from goodhart.simulator.persona import PERSONA_NAMES, get_persona
@@ -122,8 +124,67 @@ def persona_mix_reward(
     return [scored[i] for i in range(len(records))]
 
 
+@dataclass(frozen=True)
+class Floor:
+    """A reply with fewer than `min_words` words before its answer earns `value`."""
+
+    min_words: int
+    value: float = 1.0
+
+
+def parse_floor(cfg: dict) -> Floor | None:
+    """`Floor` from `cfg["reward"]["floor"]` (`min_words`, `value`); `None` without the key."""
+    raw = (cfg.get("reward", cfg) or {}).get("floor")
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping):
+        raise ValueError(f"reward.floor must be a mapping, got {raw!r}")
+    unknown = sorted(set(raw) - {"min_words", "value"})
+    if unknown:
+        raise ValueError(f"unknown keys in reward.floor: {unknown}")
+    min_words = raw.get("min_words")
+    if isinstance(min_words, bool) or not isinstance(min_words, int) or min_words < 1:
+        raise ValueError(f"reward.floor.min_words must be an integer >= 1, got {min_words!r}")
+    value = raw.get("value", 1.0)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 1 <= value <= 10:
+        raise ValueError(f"reward.floor.value must be a number in [1, 10], got {value!r}")
+    return Floor(min_words=min_words, value=float(value))
+
+
+def apply_floor(scores: Sequence[float], responses: Sequence[str], floor: Floor) -> list[float]:
+    """`scores` with `floor.value` for every reply shorter than `floor.min_words` words."""
+    from goodhart.eval.answer_parse import words_before_answer
+
+    return [
+        floor.value if words_before_answer(response) < floor.min_words else float(score)
+        for score, response in zip(scores, responses, strict=True)
+    ]
+
+
+class FlooredReward:
+    """`inner` with a reply floor; `last_raw` holds the unfloored ratings of the last call."""
+
+    def __init__(self, inner: RewardFn, floor: Floor) -> None:
+        self.inner = inner
+        self.floor = floor
+        self.last_raw: list[float] = []
+
+    def __call__(self, records: list[dict], responses: list[str]) -> list[float]:
+        self.last_raw = [float(score) for score in self.inner(records, responses)]
+        return apply_floor(self.last_raw, responses, self.floor)
+
+
 def build_reward_fn(cfg: dict, backend: ScoringBackend) -> RewardFn:
-    """Reward callable from `cfg["reward"]` (`kind`, `alpha`, `persona_weights`)."""
+    """Reward callable from `cfg["reward"]` (`kind`, `alpha`, `persona_weights`, `floor`).
+
+    With `floor` the judge still rates every reply and the result is a `FlooredReward`.
+    """
+    fn = _unfloored_reward_fn(cfg, backend)
+    floor = parse_floor(cfg)
+    return fn if floor is None else FlooredReward(fn, floor)
+
+
+def _unfloored_reward_fn(cfg: dict, backend: ScoringBackend) -> RewardFn:
     reward_cfg = cfg.get("reward", cfg)
     kind = reward_cfg.get("kind", "immediate")
     if kind == "immediate":

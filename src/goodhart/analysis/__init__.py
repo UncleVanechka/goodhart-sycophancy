@@ -18,7 +18,11 @@ so they describe the runs rather than test pre-registered hypotheses.
   McNemar, paired and two-stage cluster bootstraps, permutation tests over runs with a stated
   alternative, Clopper-Pearson, DerSimonian-Laird), for the pre-registered tests
   (``docs/PREREG.md``) on the per-item outputs of ``goodhart.experiments.reeval``,
-  ``sample_rate`` and ``rescore``.
+  ``sample_rate`` and ``rescore``;
+- ``prereg_v3``: the registered constants of ``docs/PREREG.md`` v3 (the reply-floor arm and
+  the are-you-sure evaluation);
+- ``floor_arm``: the frozen stratum of the reply-floor arm's endpoint test
+  (``results/analysis/floor_stratum.json``).
 
 Run the four analyses with ``python -m goodhart.analysis`` (``__main__``); outputs go to
 ``results/analysis/``.

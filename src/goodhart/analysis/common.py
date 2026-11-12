@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import glob
 import math
-import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -23,6 +22,7 @@ from typing import Any
 
 import numpy as np
 
+from goodhart.eval.answer_parse import ANSWER_MARKER as _ANSWER_MARKER
 from goodhart.io import model_slug, read_json, read_jsonl
 
 RUN_STAGES = ("grpo", "grpo_first_pass")
@@ -31,9 +31,6 @@ FORMS = ("bare", "medium", "long")
 BARE_MAX_CHARS = 20
 LONG_MIN_CHARS = 200
 TIE_TOL = 1e-9
-
-# the marker of the parser's primary rule ("Answer: X", optional markdown around the colon)
-_ANSWER_MARKER = re.compile(r"answer\**\s*:", re.IGNORECASE)
 
 
 # ----------------------------------------------------------------------------- GRPO runs
@@ -79,13 +76,17 @@ class Run:
 
 
 def condition_of(summary: dict) -> str:
-    """``persona_mix`` for a persona mixture, else ``alpha=<α>`` (``alpha=0`` for immediate)."""
+    """``persona_mix`` for a persona mixture, else ``alpha=<α>`` (``alpha=0`` for immediate);
+    a run trained with a reply floor gets ``+floor<min_words>`` appended."""
     reward = (summary.get("config") or {}).get("reward") or {}
     kind = summary.get("reward_kind") or reward.get("kind")
     if kind == "persona_mix":
-        return "persona_mix"
-    alpha = summary.get("alpha", reward.get("alpha", 0.0))
-    return f"alpha={float(alpha or 0.0):g}"
+        condition = "persona_mix"
+    else:
+        alpha = summary.get("alpha", reward.get("alpha", 0.0))
+        condition = f"alpha={float(alpha or 0.0):g}"
+    floor = reward.get("floor")
+    return f"{condition}+floor{floor['min_words']}" if floor else condition
 
 
 def condition_label(condition: str) -> str:

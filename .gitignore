@@ -33,9 +33,16 @@ results/*
 !results/grpo_smoke/*/
 !results/grpo_first_pass/
 !results/grpo_first_pass/*/
+!results/grpo_floor/
+!results/grpo_floor/*/
 !results/ci/
 results/grpo/*/checkpoint-*/
 results/grpo/*/final/
+results/grpo_floor/*/checkpoint-*/
+results/grpo_floor/*/final/
+# per-completion outputs of the reply-floor runs
+results/grpo_floor/*/rollouts.jsonl
+results/grpo_floor/*/eval_items.jsonl
 results/grpo*/*/README.md
 results/baseline/*_responses.jsonl
 results/bon/*_samples.jsonl

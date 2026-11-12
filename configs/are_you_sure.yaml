@@ -1,0 +1,66 @@
+# goodhart.experiments.are_you_sure — two-turn evaluation of the base policy and saved adapters
+# (docs/PREREG.md v3, part B): turn 1 on the no-opinion validation and test questions, then a
+# pushback and a neutral second turn. Decoding repeats reeval.yaml; no judge is loaded.
+# Inputs, both under paths.data (default: data) and copied there before the run:
+#   adapters/<run>/final          the run's final adapter, <out>/<run>/final of its training
+#                                 config (results/grpo/<run>/final for the policies below)
+#   reeval/<policy>/items.jsonl   the policy's rows of the paired re-evaluation,
+#                                 results/reeval/<policy>/items.jsonl of reeval.yaml
+seed: 42
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+
+# name -> base | adapter directory | {adapter}, evaluated in this order (the registered one).
+# Relative paths are under paths.data. null drops a policy set in this file
+policies:
+  base: base
+  grpo-immediate-s43: adapters/grpo-immediate-s43/final          # α = 0
+  grpo-immediate-s44: adapters/grpo-immediate-s44/final
+  grpo-delayed-a0.6: adapters/grpo-delayed-a0.6/final            # α = 0.6
+  grpo-delayed-s43-a0.6: adapters/grpo-delayed-s43-a0.6/final
+  grpo-delayed-s44-a0.6: adapters/grpo-delayed-s44-a0.6/final
+  grpo-persona-mix: adapters/grpo-persona-mix/final              # persona mixture
+  grpo-persona-mix-s43: adapters/grpo-persona-mix-s43/final
+  grpo-delayed-a0.3: adapters/grpo-delayed-a0.3/final            # α = 0.3
+  grpo-delayed-s43-a0.3: adapters/grpo-delayed-s43-a0.3/final
+  grpo-delayed-s44-a0.3: adapters/grpo-delayed-s44-a0.3/final
+
+# policies without a registered prediction, in the format of policies; they are evaluated
+# after every policy above (for example a saved checkpoint of a longer run)
+optional: {}
+
+policy:
+  device: cuda
+  dtype: float32          # as reeval.yaml: the paired re-evaluation decoded in it
+
+generation:               # as reeval.yaml
+  max_new_tokens: 512
+  chat_template_kwargs:
+    enable_thinking: false
+
+eval:
+  splits: [val, test]     # 300 no-opinion questions each
+  batch_size: 16          # as reeval.yaml
+  max_questions: null     # questions per split; null = all
+
+# name -> the policy's items.jsonl of the paired re-evaluation, under paths.data. The summary
+# counts the questions whose turn-1 letter is the one in that file. A policy without an entry
+# is not compared (reference: null). A named file that is not there is logged and recorded as
+# missing_file; the count can then be made afterwards from turn1_parsed in items.jsonl
+reference:
+  min_same: 594           # of 600: with fewer, the turn-1 letters of this run stand
+  items:
+    base: reeval/base/items.jsonl
+    grpo-immediate-s43: reeval/grpo-immediate-s43/items.jsonl
+    grpo-immediate-s44: reeval/grpo-immediate-s44/items.jsonl
+    grpo-delayed-a0.6: reeval/grpo-delayed-a0.6/items.jsonl
+    grpo-delayed-s43-a0.6: reeval/grpo-delayed-s43-a0.6/items.jsonl
+    grpo-delayed-s44-a0.6: reeval/grpo-delayed-s44-a0.6/items.jsonl
+    grpo-persona-mix: reeval/grpo-persona-mix/items.jsonl
+    grpo-persona-mix-s43: reeval/grpo-persona-mix-s43/items.jsonl
+    grpo-delayed-a0.3: reeval/grpo-delayed-a0.3/items.jsonl
+    grpo-delayed-s43-a0.3: reeval/grpo-delayed-s43-a0.3/items.jsonl
+    grpo-delayed-s44-a0.3: reeval/grpo-delayed-s44-a0.3/items.jsonl
+
+skip_done: true           # a policy with a summary and all rows of both second turns is read back
+out: results/are_you_sure

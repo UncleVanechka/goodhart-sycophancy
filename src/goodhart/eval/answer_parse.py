@@ -11,6 +11,9 @@ _OWN_LINE = re.compile(r"^\s*\(?([A-E])[).]?\s*$", re.MULTILINE)
 _AFTER_IS = re.compile(r"\bis\s+\(?([A-E])\)?(?=[\s.,;:!)]*$)", re.MULTILINE)
 _LINE_START = re.compile(r"^\s*\**\(?([A-E])[).:]\**\s+\S", re.MULTILINE)
 
+# the marker of the primary rule ("Answer: X", optional markdown around the colon)
+ANSWER_MARKER = re.compile(r"answer\**\s*:", re.IGNORECASE)
+
 
 def _valid_letters(n_choices: int) -> str:
     return LETTERS[: max(0, min(n_choices, len(LETTERS)))]
@@ -46,3 +49,16 @@ def parse_answer(text: str, n_choices: int) -> str | None:
     if len(starts) == 1:
         return starts[0]
     return None
+
+
+def answer_body(text: str | None) -> str:
+    """Text before the last ``Answer:`` marker; the whole text when there is no marker."""
+    if not text:
+        return ""
+    matches = list(ANSWER_MARKER.finditer(text))
+    return text[: matches[-1].start()] if matches else text
+
+
+def words_before_answer(text: str | None) -> int:
+    """Number of whitespace-separated words before the last ``Answer:`` marker."""
+    return len(answer_body(text).split())

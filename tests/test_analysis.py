@@ -11,6 +11,7 @@ from goodhart.analysis.__main__ import main
 from goodhart.analysis.common import (
     bootstrap_difference,
     bootstrap_over_runs,
+    condition_of,
     downward_zero_crossings,
     first_crossing,
     jsonable,
@@ -270,6 +271,22 @@ def test_load_runs_conditions_and_proxy(results_dir):
     ]
     assert [r.has_proxy for r in runs] == [True, True, True, False]
     assert runs[0].model == "toy-1"
+
+
+def test_condition_of_marks_a_reply_floor():
+    def summary(kind: str, alpha: float, floor: dict | None = None) -> dict:
+        reward = {"kind": kind, "alpha": alpha}
+        if floor is not None:
+            reward["floor"] = floor
+        return {"alpha": alpha, "reward_kind": kind, "config": {"reward": reward}}
+
+    floor = {"min_words": 30, "value": 1.0}
+    assert condition_of(summary("immediate", 0.0)) == "alpha=0"
+    assert condition_of(summary("delayed", 0.3)) == "alpha=0.3"
+    assert condition_of(summary("persona_mix", 0.0)) == "persona_mix"
+    assert condition_of(summary("immediate", 0.0, floor)) == "alpha=0+floor30"
+    assert condition_of(summary("persona_mix", 0.0, floor)) == "persona_mix+floor30"
+    assert condition_of({}) == "alpha=0"
 
 
 def test_frontier_reads_first_crossing_and_drops_unreached(results_dir):

@@ -85,10 +85,19 @@ make bon                         # experiment 2 + BoN mitigation (GPU)
 make grpo-all                    # experiments 3-4: every run under results/grpo/, ~61 GPU-hours
 make ci                          # results/ci/summary.md
 make plots                       # figures/*.png
+
+# registered in docs/PREREG.md v3 (GPU); these runs are not among the reported ones
+make grpo-floor                  # reply-floor arm, configs/grpo_floor.yaml -> results/grpo_floor/ (then SEED=43 and SEED=44)
+make reeval-floor                # its endpoint re-evaluation, configs/reeval_floor.yaml -> results/reeval_floor/
+make are-you-sure                # two-turn evaluation of the saved adapters, configs/are_you_sure.yaml -> results/are_you_sure/
 ```
 
-The configs in `configs/` are the ones the reported runs used, and `requirements.txt` pins
+The training and Best-of-N configs in `configs/` (`baseline`, `bon`, `grpo`, `mitigation`,
+`persona_mix`) are the ones the reported runs used, and `requirements.txt` pins
 the GPU stack they ran on (torch 2.6.0, transformers 5.20.2, TRL 0.29.1, PEFT 0.21.2).
+`grpo_floor.yaml`, `reeval_floor.yaml` and `are_you_sure.yaml` belong to the two experiments
+registered in [docs/PREREG.md](docs/PREREG.md) v3; the two evaluation configs read saved
+adapters and re-evaluation rows copied under `data/`, as the header of each config says.
 `tests/test_reported_configs.py` rebuilds the stage config of every result under
 `results/baseline`, `bon`, `grpo` and `grpo_first_pass` from `configs/` and compares it with
 the stored one (`grpo_smoke/` holds the smoke runs, which used other settings); results keep only the path of the judge

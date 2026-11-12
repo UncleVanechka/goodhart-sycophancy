@@ -33,7 +33,7 @@ import logging
 import random
 import re
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -52,9 +52,11 @@ from goodhart.experiments.rescore import (
     write_rows_atomic,
 )
 from goodhart.experiments.train_grpo import (
+    Prompt,
     evaluate_records,
     greedy_generate,
     read_curve,
+    render_prompt,
     select_eval_items,
 )
 from goodhart.io import load_dotenv_if_present, read_jsonl, results_payload
@@ -89,7 +91,7 @@ class PolicyBank(Protocol):
 
     def activate(self, name: str, adapter: str | None) -> None: ...
 
-    def greedy(self, prompts: list[str], batch_size: int) -> list[str]: ...
+    def greedy(self, prompts: Sequence[Prompt], batch_size: int) -> list[str]: ...
 
     def sample(
         self,
@@ -198,7 +200,7 @@ class PeftPolicyBank:
         else:
             yield self._peft
 
-    def greedy(self, prompts: list[str], batch_size: int) -> list[str]:
+    def greedy(self, prompts: Sequence[Prompt], batch_size: int) -> list[str]:
         with self._model() as model:
             return greedy_generate(
                 model,
@@ -208,6 +210,16 @@ class PeftPolicyBank:
                 batch_size,
                 self.chat_template_kwargs,
             )
+
+    def render_chat(self, messages: Sequence[dict[str, str]]) -> str:
+        """The text ``greedy`` decodes from for a conversation given as chat messages."""
+        self._load()
+        return render_prompt(self._tokenizer, messages, self.chat_template_kwargs)
+
+    def count_tokens(self, texts: Sequence[str]) -> list[int]:
+        """Number of tokens of each text under the policy's tokenizer, special tokens left out."""
+        self._load()
+        return [len(self._tokenizer(text, add_special_tokens=False)["input_ids"]) for text in texts]
 
     def sample(
         self,
@@ -480,6 +492,10 @@ def evaluate_policy(
         else:
             tolerances = {**DEFAULT_SANITY, **(cfg.get("sanity") or {})}
             sanity = sanity_check(metrics, point, tolerances)
+    elif spec.get("curve"):
+        LOGGER.warning(
+            "policy %s: no curve file at %s, the sanity check is not computed", name, spec["curve"]
+        )
     payload = results_payload(
         cfg,
         policy=name,

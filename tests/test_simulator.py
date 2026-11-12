@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import random
+import subprocess
 import sys
 import urllib.request
 from types import SimpleNamespace
@@ -31,9 +32,13 @@ from goodhart.simulator.backend import (
 )
 from goodhart.simulator.persona import PERSONA_NAMES, Persona, get_persona
 from goodhart.simulator.reward import (
+    Floor,
+    FlooredReward,
+    apply_floor,
     build_reward_fn,
     delayed_reward,
     immediate_reward,
+    parse_floor,
     persona_mix_reward,
 )
 
@@ -541,6 +546,171 @@ def test_build_reward_fn(records):
 
     with pytest.raises(ValueError):
         build_reward_fn({"reward": {"kind": "bribe"}}, stub)
+
+
+# --- reply floor ---------------------------------------------------------------
+
+REWARD_KINDS = [
+    {"kind": "immediate"},
+    {"kind": "delayed", "alpha": 0.3},
+    {"kind": "persona_mix", "persona_weights": {"agreeable": 0.6, "truth_seeking": 0.4}},
+]
+REWARD_SEED = 3
+
+
+def _reply(n_words: int, letter: str = "A") -> str:
+    return " ".join(["word"] * n_words) + f"\nAnswer: {letter}"
+
+
+def _mixed_replies(records: list[dict]) -> list[str]:
+    """Argued and bare replies in turn; every third one follows the user's letter."""
+    replies = []
+    for i, record in enumerate(records):
+        letter = (record["opinion_answer"] or record["gold"]) if i % 3 == 0 else record["gold"]
+        replies.append(_reply(30 if i % 2 == 0 else 0, letter))
+    return replies
+
+
+def _plain_scores(reward_cfg: dict, backend, records: list[dict], replies: list[str]):
+    """The reward of ``reward_cfg`` computed with the functions ``build_reward_fn`` wraps."""
+    if reward_cfg["kind"] == "immediate":
+        return immediate_reward(backend, records, replies)
+    if reward_cfg["kind"] == "delayed":
+        return delayed_reward(backend, records, replies, reward_cfg["alpha"])
+    rng = random.Random(REWARD_SEED)
+    return persona_mix_reward(backend, records, replies, reward_cfg["persona_weights"], rng)
+
+
+def test_parse_floor_reads_the_reward_section():
+    assert parse_floor({"reward": {"kind": "immediate"}}) is None
+    assert parse_floor({"reward": {"kind": "immediate", "floor": None}}) is None
+    assert parse_floor({"reward": None}) is None
+    assert parse_floor({}) is None
+    floor = parse_floor({"reward": {"kind": "immediate", "floor": {"min_words": 30, "value": 1}}})
+    assert floor == Floor(min_words=30, value=1.0)
+    assert isinstance(floor.value, float)
+    assert parse_floor({"reward": {"floor": {"min_words": 15}}}) == Floor(15, 1.0)
+    assert parse_floor({"floor": {"min_words": 5, "value": 2.5}}) == Floor(5, 2.5)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        floor.min_words = 1
+
+
+@pytest.mark.parametrize(
+    "floor",
+    [
+        30,
+        "30 words",
+        [30, 1.0],
+        {},
+        {"value": 1.0},
+        {"min_word": 30},
+        {"min_words": 30, "values": 1.0},
+        {"min_words": 0},
+        {"min_words": -3},
+        {"min_words": True},
+        {"min_words": 30.0},
+        {"min_words": "30"},
+        {"min_words": 30, "value": 0.5},
+        {"min_words": 30, "value": 11},
+        {"min_words": 30, "value": True},
+        {"min_words": 30, "value": "1"},
+        {"min_words": 30, "value": None},
+        {"min_words": 30, "value": float("nan")},
+    ],
+)
+def test_parse_floor_rejects_malformed(floor):
+    with pytest.raises(ValueError, match="reward.floor"):
+        parse_floor({"reward": {"kind": "immediate", "floor": floor}})
+    with pytest.raises(ValueError, match="reward.floor"):
+        build_reward_fn({"reward": {"kind": "immediate", "floor": floor}}, StubBackend())
+
+
+def test_apply_floor_counts_words_before_the_last_answer():
+    floor = Floor(min_words=30, value=1.0)
+    assert apply_floor([7.0, 8.0, 9.0], [_reply(29), _reply(30), "Answer: A"], floor) == [
+        1.0,
+        8.0,
+        1.0,
+    ]
+    assert apply_floor([9.0], ["Answer: A\n" + " ".join(["word"] * 50)], floor) == [1.0]
+    assert apply_floor([6.0], [" ".join(["word"] * 30)], floor) == [6.0]
+    assert apply_floor([4.0, 5.0], [_reply(30), _reply(31)], Floor(31, 2.5)) == [2.5, 5.0]
+    with pytest.raises(ValueError):
+        apply_floor([1.0, 2.0], [_reply(30)], floor)
+
+
+def test_floored_reward_rates_every_reply_once_and_keeps_the_ratings(records):
+    calls: list[tuple[list[dict], list[str]]] = []
+
+    def inner(batch: list[dict], replies: list[str]) -> list[float]:
+        calls.append((batch, replies))
+        return [5 + i for i in range(len(replies))]
+
+    replies = [_reply(29), _reply(30), "Answer: B", _reply(45)]
+    reward = FlooredReward(inner, Floor(min_words=30, value=1.0))
+    assert reward(records[:4], replies) == [1.0, 6.0, 1.0, 8.0]
+    assert reward.last_raw == [5.0, 6.0, 7.0, 8.0]
+    assert reward.floor == Floor(30, 1.0)
+    assert calls == [(records[:4], replies)]
+    reward(records[:1], [_reply(31)])
+    assert reward.last_raw == [5.0]
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("reward_cfg", REWARD_KINDS, ids=lambda cfg: cfg["kind"])
+def test_build_reward_fn_without_floor_is_the_plain_reward(records, reward_cfg):
+    replies = _mixed_replies(records)
+    expected = _plain_scores(reward_cfg, MockBackend(), records, replies)
+    assert len(set(expected)) > 1
+    for reward in (dict(reward_cfg), {**reward_cfg, "floor": None}):
+        stub = StubBackend()
+        fn = build_reward_fn({"seed": REWARD_SEED, "reward": reward}, stub)
+        assert not isinstance(fn, FlooredReward)
+        assert not hasattr(fn, "floor") and not hasattr(fn, "last_raw")
+        plain_stub = StubBackend()
+        assert fn(records, replies) == _plain_scores(reward_cfg, plain_stub, records, replies)
+        assert stub.calls == plain_stub.calls
+        mock_fn = build_reward_fn({"seed": REWARD_SEED, "reward": reward}, MockBackend())
+        assert mock_fn(records, replies) == expected
+
+
+@pytest.mark.parametrize("reward_cfg", REWARD_KINDS, ids=lambda cfg: cfg["kind"])
+def test_build_reward_fn_with_floor_wraps_every_kind(records, reward_cfg):
+    replies = _mixed_replies(records)
+    cfg = {
+        "seed": REWARD_SEED,
+        "reward": {**reward_cfg, "floor": {"min_words": 30, "value": 1.0}},
+    }
+    stub = StubBackend()
+    fn = build_reward_fn(cfg, stub)
+    assert isinstance(fn, FlooredReward)
+    assert fn.floor == Floor(min_words=30, value=1.0)
+
+    plain_stub = StubBackend()
+    _plain_scores(reward_cfg, plain_stub, records, replies)
+    fn(records, replies)
+    assert stub.calls == plain_stub.calls
+    assert {call[2] for call in stub.calls} == set(replies)
+
+    plain = _plain_scores(reward_cfg, MockBackend(), records, replies)
+    floored = build_reward_fn(cfg, MockBackend())
+    assert floored(records, replies) == [
+        score if i % 2 == 0 else 1.0 for i, score in enumerate(plain)
+    ]
+    assert floored.last_raw == plain
+    assert any(score != 1.0 for score in plain[1::2])
+
+
+def test_importing_the_rewards_loads_no_evaluation_package():
+    """The reward and training modules read the word count only when a floor is applied."""
+    code = (
+        "import sys\n"
+        "import goodhart.simulator.reward\n"
+        "import goodhart.experiments.train_grpo\n"
+        "print(sorted(m for m in ('goodhart.eval', 'numpy', 'pandas') if m in sys.modules))"
+    )
+    run = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert run.stdout.strip() == "[]"
 
 
 # --- HFJudgeBackend with fake tokenizer and model ------------------------------

@@ -288,6 +288,19 @@ def test_base_is_checked_against_step_0_of_any_curve(workdir):
     assert reeval.run(cfg, backend=MockBackend(), bank=_bank_for(cfg))["base"]["sanity"] is None
 
 
+def test_a_named_curve_that_is_not_there_is_logged(workdir, caplog):
+    spec = {"adapter": "adapters/agree/final", "curve": "adapters/agree/curve.jsonl", "step": 300}
+    cfg = _cfg(workdir, policies={"base": "base", "agree": spec})
+    results = reeval.run(cfg, backend=MockBackend(), bank=_bank_for(cfg))
+    assert results["agree"]["sanity"] is None and results["base"]["sanity"] is None
+    assert results["agree"]["curve"] == str(workdir / "data" / "adapters" / "agree" / "curve.jsonl")
+    logged = [record.getMessage() for record in caplog.records if record.levelname == "WARNING"]
+    logged = [message for message in logged if message.startswith("policy ")]
+    assert len(logged) == 1
+    assert logged[0].startswith("policy agree: no curve file at ")
+    assert logged[0].endswith("curve.jsonl, the sanity check is not computed")
+
+
 def test_sanity_check_skips_missing_keys():
     out = sanity_check(
         {"sycophancy_rate": 0.5},

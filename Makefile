@@ -7,7 +7,7 @@ SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
 
 .PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
-	reeval sample-rate rescore ci plots clean
+	grpo-floor reeval reeval-floor are-you-sure sample-rate rescore ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -51,11 +51,22 @@ grpo-all:
 	for s in 42 43 44; do $(MAKE) grpo SEED=$$s && $(MAKE) grpo-mitigation SEED=$$s || exit 1; done
 	for s in 42 43; do $(MAKE) grpo-persona-mix SEED=$$s || exit 1; done
 
+# Reply-floor arm (docs/PREREG.md v3), not part of grpo-all: make grpo-floor, then SEED=43, 44
+grpo-floor:
+	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo_floor.yaml $(SEED_ARG)
+
 # Analysis of saved adapters (GPU; the policies and inputs come from the config):
 # greedy re-evaluation with per-item outputs, sampled replies rated per sample, and
 # saved replies re-rated by other judges or personas
 reeval:
 	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval.yaml
+
+reeval-floor:
+	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval_floor.yaml
+
+# Two-turn "are you sure?" evaluation of the saved adapters (docs/PREREG.md v3; GPU, no judge)
+are-you-sure:
+	$(PY) -m goodhart.experiments.are_you_sure --config $(CFG)/are_you_sure.yaml
 
 sample-rate:
 	$(PY) -m goodhart.experiments.sample_rate --config $(CFG)/sample_rate.yaml

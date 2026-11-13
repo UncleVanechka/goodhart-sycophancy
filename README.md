@@ -115,6 +115,15 @@ report can be regenerated only after `make reeval-600` on saved checkpoints (and
 reeval` for the base policy), while its logged half (proxy gain, directional prediction,
 early-warning check, condition contrast) follows from the stored runs and is recomputed by
 `tests/test_prereg_v2.py`.
+The 15 predictions of docs/PREREG.md v1 are read in three part files under `results/analysis/`:
+`prereg_m2.json` (`python -m goodhart.analysis.prereg_eval`), `prereg_m3.json`
+(`python -m goodhart.analysis.prereg_checkpoints`) and `prereg_m4.json`
+(`python -m goodhart.analysis.prereg_judges`). They read the per-question and per-sample
+outputs of `make reeval`, `make sample-rate` and `make rescore` (the base policy, the 10 saved
+adapters and the Best-of-N samples); neither the adapters nor those rows are in the repository,
+so these files are committed outputs and are not rebuilt by any target.
+`prereg_results.{json,md}` merges the three parts with the corrections of an independent check
+and has no command of its own.
 `tests/test_reported_configs.py` rebuilds the stage config of every result under
 `results/baseline`, `bon`, `grpo`, `grpo_600` and `grpo_first_pass` from `configs/` and compares it with
 the stored one (`grpo_smoke/` holds the smoke runs, which used other settings); results keep only the path of the judge
@@ -145,7 +154,7 @@ and `grpo.use_vllm: true` in the GRPO ones. W&B logging is `wandb.mode` in
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
 | RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
 | Tracking | Weights & Biases (off in the reported runs) |
-| Compute | 1× A100 80 GB; 83 GPU-hours for everything reported |
+| Compute | 1× A100 80 GB; 83 GPU-hours for everything reported by Nov 10 (the three 600-step runs and the re-analysis are not counted) |
 
 ## Status
 
@@ -163,10 +172,12 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO smoke on Qwen3-1.7B: proxy and sycophancy rise within 200 steps, gold falls
 - [x] GRPO full run on Qwen3-1.7B with held-out SycophancyEval: sycophancy 49 → 98 %, held-out 62 → 85 %
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
-- [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
+- [x] Persona mixture in GRPO, five runs (two of 300 steps, three of 600 registered in docs/PREREG.md v2): slows the drift, does not stop it — 48.5 and 55.8 % at step 300, 48.2, 62.2 and 74.3 % at step 600 on the 600 wrong-opinion validation and test questions (the last at 446 of 600 against a collapse line of 450, and past it on its validation half; untrained model 48.0 %; 85.3 and 95.2 % at step 300 for the two re-evaluated runs with the agreeable user alone), proxy +0.21 to +0.46 at step 300 — [results/analysis/prereg_v2.md](results/analysis/prereg_v2.md)
+- [x] 15 predictions registered before the re-analysis of the saved adapters ([docs/PREREG.md](docs/PREREG.md)): 9 confirmed, 2 refuted, 2 disputed, 1 partly, 1 classified — [results/analysis/prereg_results.md](results/analysis/prereg_results.md)
+- [ ] Reply-floor arm and two-turn "are you sure?" evaluation: registered (docs/PREREG.md v3), not yet run
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
 - [x] Every run in results/baseline, bon, grpo and grpo_600 reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
-- [ ] Write-up — draft in docs/WRITEUP.md (~2 000 words, proofread Nov 10), final by Nov 17
+- [ ] Write-up — draft in docs/WRITEUP.md (~3 000 words with tables, revised Nov 13 for the pre-registered results), final by Nov 17
 
 ## References
 

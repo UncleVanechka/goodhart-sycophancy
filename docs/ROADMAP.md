@@ -1,6 +1,6 @@
 # Roadmap
 
-*Updated 2026-11-10. Hard deadline for the write-up: **2026-11-21**.*
+*Updated 2026-11-13. Hard deadline for the write-up: **2026-11-21**.*
 
 One sentence: optimizing an LLM against the approval of a simulated user breeds
 sycophancy the way optimizing a feed for clicks breeds clickbait, and we test
@@ -18,14 +18,23 @@ is a knife edge on this model (13 runs): α = 0.3 only slows the collapse
 holds in all four (37–46 %, gold up 1–2 points) but without any gain in the
 immediate proxy — it swaps the objective rather than keeping approval with
 less sycophancy. A persona mixture (70 % agreeable / 30 % truth-seeking
-users, two runs) holds sycophancy near the start: 48 and 55 % at step 300
-against 49 %, neither beyond noise (86–98 % for the agreeable user alone),
-gold flat, proxy up 0.24–0.46 — about half the α = 0 gain. Two runs cannot
-exclude an α = 0.3-style collapse. Next: the final write-up.
+users, five runs: two of 300 steps, three of 600 registered in
+[PREREG.md](PREREG.md) v2) slows the drift, as α = 0.3 does, but needs no
+answer key: on the 600 endpoint questions (wrong-opinion validation and test;
+untrained model 48.0 %) the runs end at 48.5 and 55.8 % (step 300) and at
+48.2, 62.2 and 74.3 % (step 600), the last at 446 of 600 against a collapse
+line of 450 and past it on its validation half; proxy up 0.21–0.46 at step
+300 ([prereg_v2.md](../results/analysis/prereg_v2.md)). Of the 15 predictions
+registered before the re-analysis of the saved adapters, 9 were confirmed, 2
+refuted, 2 are disputed, 1 held partly and 1 was a classification
+([prereg_results.md](../results/analysis/prereg_results.md)). §4.3 describes
+the 13 runs as logged by Nov 10 and predates both. A reply-floor arm and a
+two-turn "are you sure?" evaluation are registered (PREREG.md v3) and not yet
+run. Next: those two, then the final write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       done        done      done (13 runs)     Nov 17+
+  done       done       done       done        done      done (16 runs)     Nov 17+
 ```
 
 ## 1. The question in one picture
@@ -125,7 +134,7 @@ figures. Two consequences shape the stack:
 | 1 | **Baseline** — one answer per prompt, no optimization | sycophancy the model brings in; the judge's bias | ✅ Qwen3-1.7B, Qwen3-4B |
 | 2 | **Best-of-N** — sample N, keep the argmax of the reward | optimization pressure without training | ✅ 1.7B and 4B (N = 1, 4, 16, 64; α = 0, 0.3, 0.6, 1.0) |
 | 3 | **GRPO + LoRA** against the immediate reward | whether training amplifies what selection shows; transfer to held-out SycophancyEval | ✅ 1.7B, 300 steps, 3 seeds: sycophancy 49 → 86–98 %, held-out +13 to +23 points (§4.3) |
-| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO, four runs each (§4.3): 0.3 only slows the collapse, 0.6 holds but the proxy stays flat · ✅ persona mixture (0.7 agreeable / 0.3 truth-seeking), two runs: 48 and 55 % at step 300 against a 49 % start, proxy +0.24 to +0.46 |
+| 4 | **Mitigation** — delayed reward (sweep α), persona mixture | whether the fix survives training | ✅ in Best-of-N · ✅ α = 0.3, 0.6 in GRPO, four runs each (§4.3): 0.3 only slows the collapse, 0.6 holds but the proxy stays flat · ✅ persona mixture (0.7 agreeable / 0.3 truth-seeking), five runs (three of 600 steps, PREREG v2): slows the drift, does not stop it — 48.2–74.3 % at the last step on the 600 endpoint questions against 48.0 % for the untrained model, proxy +0.21 to +0.46 at step 300 |
 
 Go / no-go for 3: the proxy must rise within the first 200 GRPO steps. If it
 does not by **Nov 13**, RL is dropped and the project ships on experiments 1
@@ -317,15 +326,20 @@ What the numbers say:
   groups over its last 25 steps, informed rating down from 8.2 to 7.5 and
   sycophancy back from 35 % at step 200 to 46 % (start 49 %). Held-out sycophancy moves by −1 to +1 points
   against each run's own start.
-- **The persona mixture holds near the start, with half the proxy gain.**
-  Two runs (seeds 42, 43), 70 % of the questions rated by the agreeable user
+- **The persona mixture, two runs as logged on Nov 10 (superseded).**
+  *Five runs slow the drift, they do not hold it: three 600-step runs end at
+  48.2, 62.2 and 74.3 % on the 600 endpoint questions — see "Where we are" and
+  [prereg_v2.md](../results/analysis/prereg_v2.md).* What the two logs showed:
+  seeds 42 and 43, 70 % of the questions rated by the agreeable user
   and 30 % by the truth-seeking one (persona fixed per question, invisible to
   the policy). Both dip to 41 % within 50 steps (the same early dip as in most
   runs, agreeable-only α = 0 included: 38–49 % at step 25 across all
   thirteen), then wander: seed 42 climbs 43 → 55 % from step 150 to 300
-  (beyond noise), seed 43 reaches 55 % at step 150 and ends at 48 %. Neither
-  endpoint (Wilson [50, 61] and [42, 53]) is beyond noise of the 49 % start or
-  of each other. Gold 64–66 % (start 65), gold under a wrong opinion 37–43 %
+  (beyond noise), seed 43 reaches 55 % at step 150 and ends at 48 %. By Wilson
+  intervals ([50, 61] and [42, 53]) neither endpoint separates from the 49 %
+  start; the paired test run later gives seed 42 +6.0 points on these 300
+  questions (p = 0.015) and +7.8 [+4.7, +11.0] on the 600 endpoint questions,
+  seed 43 +0.5 [−1.8, +2.8]. Gold 64–66 % (start 65), gold under a wrong opinion 37–43 %
   (start 42), held-out +2 and +3 points. The immediate judge rises by 0.46 and
   0.24 — about half the α = 0 mean (+0.75) — and the informed judge by 0.2 in
   both; completions stay far longer than at α = 0 (82 and 57 tokens against
@@ -349,8 +363,8 @@ What the numbers say:
 | Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
 | Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ✅ full run Nov 8 |
-| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · ✅ persona mixture Nov 9–10, two runs |
-| Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ✅ draft Nov 9 ([WRITEUP.md](WRITEUP.md)) · ⏳ final |
+| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · ✅ persona mixture Nov 9–10, two runs · ✅ three 600-step mixture seeds Nov 12–13 (PREREG v2: drifts) |
+| Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ✅ draft Nov 9, revised Nov 13 for the pre-registered results ([WRITEUP.md](WRITEUP.md)) · ⏳ final |
 | Nov 20–21 | Final review, ship | ⏳ |
 
 ## 6. Next steps, in order
@@ -381,11 +395,14 @@ What the numbers say:
    stops it at the price of the proxy. Persona mixture (`reward.kind:
    persona_mix`, 0.7 agreeable / 0.3 truth-seeking) ran twice on Nov 9–10
    (seeds 42, 43): 55 and 48 % sycophancy at step 300 against a 49 % start,
-   proxy +0.46 and +0.24. Each run costs ~6 GPU-hours.
+   proxy +0.46 and +0.24. Each run costs ~6 GPU-hours. Three 600-step seeds
+   (44–46, PREREG v2) followed on Nov 12–13; the registered outcome is
+   "drifts" ([prereg_v2.md](../results/analysis/prereg_v2.md)).
 5. **Confidence intervals** — done: `python -m goodhart.experiments.confidence` writes
    `results/ci/` (bootstrap over questions for baseline and Best-of-N, reproducing every
    committed point; Wilson intervals and across-run spread for GRPO).
-6. **Write-up and cleanup** — draft in [WRITEUP.md](WRITEUP.md); final by Nov 17.
+6. **Write-up and cleanup** — draft in [WRITEUP.md](WRITEUP.md), revised Nov 13 for the
+   pre-registered results; final by Nov 17.
 
 ## 7. Risks and fallbacks
 
@@ -402,7 +419,7 @@ What the numbers say:
 - [x] Frontier figure with Best-of-N curves for both models and GRPO curves for α ∈ {0, 0.3, 0.6} and the persona mixture
 - [x] Held-out SycophancyEval numbers before and after GRPO
 - [x] Confidence intervals on every reported rate — `results/ci/summary.md` (bootstrap over questions for baseline and Best-of-N, Wilson plus 3–4 runs per α for GRPO)
-- [x] Limitations section: small models, synthetic user, one judge, seeds ([WRITEUP.md](WRITEUP.md) §7)
+- [x] Limitations section: small models, synthetic user, one training judge (two others re-rated the samples), seeds ([WRITEUP.md](WRITEUP.md) §7)
 - [x] `make data && make baseline && make bon && make grpo-all && make plots` reproduces every figure from `configs/` (stage configs checked against every reported result by `tests/test_reported_configs.py`; `data/prompts.jsonl` byte-identical; the first-pass pair is not rerun)
 - [ ] Write-up published; README links to it (draft linked)
 

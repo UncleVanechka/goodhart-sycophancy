@@ -21,8 +21,16 @@ so they describe the runs rather than test pre-registered hypotheses.
   ``sample_rate`` and ``rescore``;
 - ``prereg_v3``: the registered constants of ``docs/PREREG.md`` v3 (the reply-floor arm and
   the are-you-sure evaluation);
-- ``floor_arm``: the frozen stratum of the reply-floor arm's endpoint test
-  (``results/analysis/floor_stratum.json``).
+- ``floor_arm``: part A of ``docs/PREREG.md`` v3, written before a floor run existed: the
+  frozen stratum of the endpoint test (``results/analysis/floor_stratum.json``) and the
+  registered reading of the floor runs (measures, labels, arm class, gates, predictions
+  A1-A3), from the outputs of ``train_grpo`` and ``reeval`` to
+  ``results/analysis/prereg_floor.json`` and ``.md``; run with
+  ``python -m goodhart.analysis.floor_arm``;
+- ``are_you_sure``: part B of ``docs/PREREG.md`` v3, written before a two-turn reply existed:
+  flip rates, labels, gates and the predictions B1-B4, from the rows of
+  ``goodhart.experiments.are_you_sure`` to ``results/analysis/prereg_are_you_sure.json`` and
+  ``.md``; run with ``python -m goodhart.analysis.are_you_sure``.
 
 Run the four analyses with ``python -m goodhart.analysis`` (``__main__``); outputs go to
 ``results/analysis/``.

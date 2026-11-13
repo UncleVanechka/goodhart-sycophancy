@@ -90,6 +90,8 @@ make plots                       # figures/*.png
 make grpo-floor                  # reply-floor arm, configs/grpo_floor.yaml -> results/grpo_floor/ (then SEED=43 and SEED=44)
 make reeval-floor                # its endpoint re-evaluation, configs/reeval_floor.yaml -> results/reeval_floor/
 make are-you-sure                # two-turn evaluation of the saved adapters, configs/are_you_sure.yaml -> results/are_you_sure/
+make prereg-floor                # registered reading of the floor arm (CPU) -> results/analysis/prereg_floor.{json,md}
+make prereg-are-you-sure         # registered reading of the two-turn evaluation (CPU) -> results/analysis/prereg_are_you_sure.{json,md}
 ```
 
 The training and Best-of-N configs in `configs/` (`baseline`, `bon`, `grpo`, `mitigation`,

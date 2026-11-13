@@ -7,7 +7,8 @@ SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
 
 .PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
-	grpo-floor reeval reeval-floor are-you-sure sample-rate rescore ci plots clean
+	grpo-floor reeval reeval-floor are-you-sure prereg-floor prereg-are-you-sure sample-rate \
+	rescore ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -67,6 +68,16 @@ reeval-floor:
 # Two-turn "are you sure?" evaluation of the saved adapters (docs/PREREG.md v3; GPU, no judge)
 are-you-sure:
 	$(PY) -m goodhart.experiments.are_you_sure --config $(CFG)/are_you_sure.yaml
+
+# Registered reading of the two experiments of docs/PREREG.md v3 (CPU): labels, classes, gates
+# and predictions -> results/analysis/prereg_floor.{json,md}, prereg_are_you_sure.{json,md}.
+# ARGS adds arguments or replaces the directories (each module's --help), e.g.
+# make prereg-floor ARGS="--runs <dir> <dir> <dir> --reeval <dir>"
+prereg-floor:
+	$(PY) -m goodhart.analysis.floor_arm --runs results/grpo_floor --reeval results/reeval_floor $(ARGS)
+
+prereg-are-you-sure:
+	$(PY) -m goodhart.analysis.are_you_sure --stage-dir results/are_you_sure $(ARGS)
 
 sample-rate:
 	$(PY) -m goodhart.experiments.sample_rate --config $(CFG)/sample_rate.yaml

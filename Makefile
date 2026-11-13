@@ -7,8 +7,8 @@ SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
 
 .PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
-	grpo-floor reeval reeval-floor are-you-sure prereg-floor prereg-are-you-sure sample-rate \
-	rescore ci plots clean
+	grpo-persona-mix-600 grpo-floor reeval reeval-600 reeval-floor are-you-sure prereg-v2 \
+	prereg-floor prereg-are-you-sure sample-rate rescore ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -52,6 +52,11 @@ grpo-all:
 	for s in 42 43 44; do $(MAKE) grpo SEED=$$s && $(MAKE) grpo-mitigation SEED=$$s || exit 1; done
 	for s in 42 43; do $(MAKE) grpo-persona-mix SEED=$$s || exit 1; done
 
+# 600-step persona mixture (docs/PREREG.md v2), not part of grpo-all; its runs go to
+# results/grpo_600/: make grpo-persona-mix-600 SEED=44, then SEED=45, 46
+grpo-persona-mix-600:
+	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/persona_mix_600.yaml $(SEED_ARG)
+
 # Reply-floor arm (docs/PREREG.md v3), not part of grpo-all: make grpo-floor, then SEED=43, 44
 grpo-floor:
 	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo_floor.yaml $(SEED_ARG)
@@ -62,12 +67,27 @@ grpo-floor:
 reeval:
 	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval.yaml
 
+# Checkpoints 100-600 of the 600-step persona-mixture runs (docs/PREREG.md v2)
+reeval-600:
+	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval_600.yaml
+
 reeval-floor:
 	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval_floor.yaml
 
 # Two-turn "are you sure?" evaluation of the saved adapters (docs/PREREG.md v3; GPU, no judge)
 are-you-sure:
 	$(PY) -m goodhart.experiments.are_you_sure --config $(CFG)/are_you_sure.yaml
+
+# Registered reading of the three 600-step persona-mixture runs of docs/PREREG.md v2 (CPU):
+# endpoint and class of every checkpoint, the rule and the predictions ->
+# results/analysis/prereg_v2.{json,md}. It reads the stored runs (results/grpo_600) and the
+# per-question rows, which are not committed: the checkpoints of make reeval-600 and the base
+# policy of make reeval (the reference of the paired counts). ARGS adds arguments or replaces
+# the directories (the module's --help), e.g.
+# make prereg-v2 ARGS="--reeval <dir> <dir> --base-items <file>"
+prereg-v2:
+	$(PY) -m goodhart.analysis.prereg_v2 --runs results/grpo_600 \
+		--reeval results/reeval_600 results/reeval --base-items results/reeval/base/items.jsonl $(ARGS)
 
 # Registered reading of the two experiments of docs/PREREG.md v3 (CPU): labels, classes, gates
 # and predictions -> results/analysis/prereg_floor.{json,md}, prereg_are_you_sure.{json,md}.

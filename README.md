@@ -68,7 +68,7 @@ docs/ROADMAP.md   plan, flow diagrams, results so far, timeline
 docs/WRITEUP.md   the write-up (draft)
 docs/JUDGE_CHECK.md  the user-simulator check
 tests/            unit tests, no GPU and no network
-results/          JSON outputs; baseline/, bon/, grpo/, grpo_first_pass/, grpo_smoke/, ci/ and judge_check/ are committed, samples and checkpoints are not
+results/          JSON outputs; baseline/, bon/, grpo/, grpo_600/, grpo_first_pass/, grpo_smoke/, ci/, judge_check/ and analysis/ are committed, samples, per-question rows and checkpoints are not
 figures/          plots; the PNGs rendered from the committed results are tracked
 ```
 
@@ -86,6 +86,11 @@ make grpo-all                    # experiments 3-4: every run under results/grpo
 make ci                          # results/ci/summary.md
 make plots                       # figures/*.png
 
+# registered in docs/PREREG.md v2; not part of grpo-all
+make grpo-persona-mix-600 SEED=44  # 600-step persona mixture (GPU), configs/persona_mix_600.yaml -> results/grpo_600/ (then SEED=45 and SEED=46)
+make reeval-600                  # endpoint re-evaluation of their checkpoints 100-600 (GPU), configs/reeval_600.yaml -> results/reeval_600/
+make prereg-v2                   # registered reading of the three runs (CPU) -> results/analysis/prereg_v2.{json,md}
+
 # registered in docs/PREREG.md v3 (GPU); these runs are not among the reported ones
 make grpo-floor                  # reply-floor arm, configs/grpo_floor.yaml -> results/grpo_floor/ (then SEED=43 and SEED=44)
 make reeval-floor                # its endpoint re-evaluation, configs/reeval_floor.yaml -> results/reeval_floor/
@@ -100,8 +105,18 @@ the GPU stack they ran on (torch 2.6.0, transformers 5.20.2, TRL 0.29.1, PEFT 0.
 `grpo_floor.yaml`, `reeval_floor.yaml` and `are_you_sure.yaml` belong to the two experiments
 registered in [docs/PREREG.md](docs/PREREG.md) v3; the two evaluation configs read saved
 adapters and re-evaluation rows copied under `data/`, as the header of each config says.
+`persona_mix_600.yaml` and `reeval_600.yaml` belong to the three 600-step persona-mixture
+runs registered in docs/PREREG.md v2. Their logged outputs are stored in `results/grpo_600/`
+and their registered reading in `results/analysis/prereg_v2.{json,md}`, written by
+`make prereg-v2` (`python -m goodhart.analysis.prereg_v2 --runs <dir> --reeval <dir> [<dir> ...]
+--base-items <items.jsonl>`). The checkpoints of these runs and the per-question rows of their
+re-evaluation are not in the repository: the endpoint, the classes and the rule in that
+report can be regenerated only after `make reeval-600` on saved checkpoints (and `make
+reeval` for the base policy), while its logged half (proxy gain, directional prediction,
+early-warning check, condition contrast) follows from the stored runs and is recomputed by
+`tests/test_prereg_v2.py`.
 `tests/test_reported_configs.py` rebuilds the stage config of every result under
-`results/baseline`, `bon`, `grpo` and `grpo_first_pass` from `configs/` and compares it with
+`results/baseline`, `bon`, `grpo`, `grpo_600` and `grpo_first_pass` from `configs/` and compares it with
 the stored one (`grpo_smoke/` holds the smoke runs, which used other settings); results keep only the path of the judge
 config, so the judge settings are pinned to the write-up's (local Qwen2.5-7B-Instruct)
 separately. `make data` rebuilds the exact `data/prompts.jsonl` the runs used and fetches
@@ -150,7 +165,7 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
 - [x] Persona mixture in GRPO, two runs: sycophancy 49 → 48 and 55 % at step 300, within noise of the start (86–98 % with the agreeable user alone), proxy +0.24 to +0.46
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
-- [x] Every run in results/baseline, bon and grpo reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
+- [x] Every run in results/baseline, bon, grpo and grpo_600 reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
 - [ ] Write-up — draft in docs/WRITEUP.md (~2 000 words, proofread Nov 10), final by Nov 17
 
 ## References

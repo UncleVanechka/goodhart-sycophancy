@@ -1,0 +1,127 @@
+# goodhart.experiments.reeval — same as reeval.yaml, for the checkpoints of the 600-step
+# persona-mixture runs (persona_mix_600.yaml, seeds 44-46; docs/PREREG.md v2): checkpoints
+# 100-600 of each run, the held-out set cut to its first 600 questions.
+# Inputs under paths.data (default: data), copied there before the run:
+# adapters/<run>/checkpoint-<step> and adapters/<run>/curve.jsonl from results/grpo_600/<run>/
+# (the output of persona_mix_600.yaml)
+seed: 42
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+# name -> base | adapter directory | {adapter, curve, step}. Relative paths are under
+# paths.data. With curve (a run's curve.jsonl) the summary compares the validation metrics
+# with that curve at step (default: its last point, step 0 for the base policy, so the base
+# can be checked against any run's step-0 evaluation: {adapter: base, curve: ...}).
+# null drops a policy set in this file. step is the step of the checkpoint: each one is
+# compared with the logged evaluation of its own step
+policies:
+  base: base
+  grpo-persona-mix-s44-ckpt100:
+    adapter: adapters/grpo-persona-mix-s44/checkpoint-100
+    curve: adapters/grpo-persona-mix-s44/curve.jsonl
+    step: 100
+  grpo-persona-mix-s44-ckpt200:
+    adapter: adapters/grpo-persona-mix-s44/checkpoint-200
+    curve: adapters/grpo-persona-mix-s44/curve.jsonl
+    step: 200
+  grpo-persona-mix-s44-ckpt300:
+    adapter: adapters/grpo-persona-mix-s44/checkpoint-300
+    curve: adapters/grpo-persona-mix-s44/curve.jsonl
+    step: 300
+  grpo-persona-mix-s44-ckpt400:
+    adapter: adapters/grpo-persona-mix-s44/checkpoint-400
+    curve: adapters/grpo-persona-mix-s44/curve.jsonl
+    step: 400
+  grpo-persona-mix-s44-ckpt500:
+    adapter: adapters/grpo-persona-mix-s44/checkpoint-500
+    curve: adapters/grpo-persona-mix-s44/curve.jsonl
+    step: 500
+  grpo-persona-mix-s44-ckpt600:
+    adapter: adapters/grpo-persona-mix-s44/checkpoint-600
+    curve: adapters/grpo-persona-mix-s44/curve.jsonl
+    step: 600
+  grpo-persona-mix-s45-ckpt100:
+    adapter: adapters/grpo-persona-mix-s45/checkpoint-100
+    curve: adapters/grpo-persona-mix-s45/curve.jsonl
+    step: 100
+  grpo-persona-mix-s45-ckpt200:
+    adapter: adapters/grpo-persona-mix-s45/checkpoint-200
+    curve: adapters/grpo-persona-mix-s45/curve.jsonl
+    step: 200
+  grpo-persona-mix-s45-ckpt300:
+    adapter: adapters/grpo-persona-mix-s45/checkpoint-300
+    curve: adapters/grpo-persona-mix-s45/curve.jsonl
+    step: 300
+  grpo-persona-mix-s45-ckpt400:
+    adapter: adapters/grpo-persona-mix-s45/checkpoint-400
+    curve: adapters/grpo-persona-mix-s45/curve.jsonl
+    step: 400
+  grpo-persona-mix-s45-ckpt500:
+    adapter: adapters/grpo-persona-mix-s45/checkpoint-500
+    curve: adapters/grpo-persona-mix-s45/curve.jsonl
+    step: 500
+  grpo-persona-mix-s45-ckpt600:
+    adapter: adapters/grpo-persona-mix-s45/checkpoint-600
+    curve: adapters/grpo-persona-mix-s45/curve.jsonl
+    step: 600
+  grpo-persona-mix-s46-ckpt100:
+    adapter: adapters/grpo-persona-mix-s46/checkpoint-100
+    curve: adapters/grpo-persona-mix-s46/curve.jsonl
+    step: 100
+  grpo-persona-mix-s46-ckpt200:
+    adapter: adapters/grpo-persona-mix-s46/checkpoint-200
+    curve: adapters/grpo-persona-mix-s46/curve.jsonl
+    step: 200
+  grpo-persona-mix-s46-ckpt300:
+    adapter: adapters/grpo-persona-mix-s46/checkpoint-300
+    curve: adapters/grpo-persona-mix-s46/curve.jsonl
+    step: 300
+  grpo-persona-mix-s46-ckpt400:
+    adapter: adapters/grpo-persona-mix-s46/checkpoint-400
+    curve: adapters/grpo-persona-mix-s46/curve.jsonl
+    step: 400
+  grpo-persona-mix-s46-ckpt500:
+    adapter: adapters/grpo-persona-mix-s46/checkpoint-500
+    curve: adapters/grpo-persona-mix-s46/curve.jsonl
+    step: 500
+  grpo-persona-mix-s46-ckpt600:
+    adapter: adapters/grpo-persona-mix-s46/checkpoint-600
+    curve: adapters/grpo-persona-mix-s46/curve.jsonl
+    step: 600
+
+policy:
+  device: cuda
+  dtype: float32          # TRL loads a model given by name in float32: the curves decoded in it
+
+generation:               # as grpo.yaml: max_completion_length, chat_template_kwargs
+  max_new_tokens: 512
+  chat_template_kwargs:
+    enable_thinking: false
+
+eval:
+  splits: [val, test]     # 300 questions x 3 opinion types each
+  batch_size: 16          # the training runs' evaluation batch size
+  max_questions: null     # questions per split, all opinion variants kept; null = all
+
+judges:                   # metric prefix -> persona; proxy is the immediate judge
+  proxy: agreeable
+  informed: agreeable_informed
+  truth_seeking: truth_seeking
+
+heldout:                  # SycophancyEval answer set, not rated; metrics are sycoeval_*, not
+                          # comparable in level to the curves' per-run heldout_* samples
+  enabled: true
+  file: sycophancy_eval/answer.jsonl    # under paths.data
+  letter_seed: 0          # Random(letter_seed) draws the A/B order once per question
+  max_questions: 600      # a fixed subset of the 1,817 questions (2,404 prompts)
+  subset_seed: 0          # the subset is the same for every job
+  batch_size: 64          # shared by every policy; 16 repeats the training runs' held-out decode
+
+sanity:                   # allowed |re-evaluated - curve| on the validation split
+  sycophancy_rate: 0.02
+  proxy_mean: 0.05
+  gold_accuracy: 0.02
+
+skip_done: true           # a policy whose summary.json exists is read back, not re-run
+out: results/reeval_600

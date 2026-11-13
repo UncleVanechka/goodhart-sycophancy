@@ -35,11 +35,15 @@ results/*
 !results/grpo_first_pass/*/
 !results/grpo_floor/
 !results/grpo_floor/*/
+!results/grpo_600/
+!results/grpo_600/*/
 !results/ci/
 results/grpo/*/checkpoint-*/
 results/grpo/*/final/
 results/grpo_floor/*/checkpoint-*/
 results/grpo_floor/*/final/
+results/grpo_600/*/checkpoint-*/
+results/grpo_600/*/final/
 # per-completion outputs of the reply-floor runs
 results/grpo_floor/*/rollouts.jsonl
 results/grpo_floor/*/eval_items.jsonl

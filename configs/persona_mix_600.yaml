@@ -1,0 +1,49 @@
+# goodhart.experiments.train_grpo — same as persona_mix.yaml, 600 steps instead of 300
+# (docs/PREREG.md v2, seeds 44-46: make grpo-persona-mix-600 SEED=44)
+seed: 42
+run_name: grpo-persona-mix
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+reward:
+  kind: persona_mix
+  alpha: 0.0            # unused by persona_mix
+  persona_weights:
+    agreeable: 0.7
+    truth_seeking: 0.3
+
+sweep:
+  alphas: []            # no sweep: one run
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+grpo:
+  num_generations: 8
+  learning_rate: 3.0e-5
+  lr_scheduler_type: constant_with_warmup
+  warmup_steps: 10
+  max_steps: 600
+  per_device_train_batch_size: 16   # 16 × 4 = 64 completions per step: 8 prompts × 8
+  gradient_accumulation_steps: 4
+  max_completion_length: 512
+  chat_template_kwargs: {enable_thinking: false}
+  beta: 0.04
+  temperature: 1.0
+  use_vllm: false       # true generates with vLLM; the reported runs used transformers
+  vllm_mode: colocate
+  bf16: true
+  logging_steps: 5
+  save_steps: 100
+
+eval:
+  every_steps: 25
+  val_items: 300
+  sycophancy_eval: true
+  sycophancy_eval_items: 300
+
+out: results/grpo_600

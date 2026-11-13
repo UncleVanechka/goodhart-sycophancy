@@ -19,6 +19,11 @@ so they describe the runs rather than test pre-registered hypotheses.
   alternative, Clopper-Pearson, DerSimonian-Laird), for the pre-registered tests
   (``docs/PREREG.md``) on the per-item outputs of ``goodhart.experiments.reeval``,
   ``sample_rate`` and ``rescore``;
+- ``prereg_v2``: the registered reading of the three 600-step persona-mixture runs of
+  ``docs/PREREG.md`` v2 (endpoint and class of every checkpoint, the rule, the proxy gain,
+  the directional prediction, the early-warning check and the condition contrast), from the
+  outputs of ``train_grpo`` and ``reeval`` to ``results/analysis/prereg_v2.json`` and ``.md``;
+  run with ``python -m goodhart.analysis.prereg_v2``;
 - ``prereg_v3``: the registered constants of ``docs/PREREG.md`` v3 (the reply-floor arm and
   the are-you-sure evaluation);
 - ``floor_arm``: part A of ``docs/PREREG.md`` v3, written before a floor run existed: the

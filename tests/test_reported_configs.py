@@ -46,6 +46,15 @@ GRPO_TARGETS = (
     ("configs/mitigation.yaml", (42, 43, 44)),
     ("configs/persona_mix.yaml", (42, 43)),
 )
+# make grpo-persona-mix-600 SEED=<seed>: the 600-step runs of docs/PREREG.md v2
+LONG_CONFIG = "persona_mix_600.yaml"
+LONG_SEEDS = (44, 45, 46)
+LONG_STAGE = "grpo_600"
+LONG_CHECKPOINTS = (100, 200, 300, 400, 500, 600)
+LONG_REEVAL_CONFIG = "reeval_600.yaml"
+RUN_FILES = ("curve.jsonl", "summary.json", "train_log.jsonl")
+# the field that names the runner job in the summaries stored under results/grpo
+JOB_FIELD = "runner_job_id"
 
 
 def _strip(cfg: dict, extra: tuple[str, ...] = ()) -> dict:
@@ -130,6 +139,192 @@ def test_make_grpo_all_runs_the_targets_above():
     calls = re.findall(r"train_grpo --config (\S+) --seed (\d+)", out)
     expected = [(path, str(seed)) for path, seeds in GRPO_TARGETS for seed in seeds]
     assert sorted(calls) == sorted(expected)
+
+
+# ----------------------------------------------------------------------------- 600-step runs
+
+
+def _long_runs() -> dict[str, dict]:
+    config = load_config(CONFIGS / LONG_CONFIG)
+    return {name: cfg for seed in LONG_SEEDS for name, cfg in expand_sweep(with_seed(config, seed))}
+
+
+def test_600_step_config_is_the_persona_mix_config_with_600_steps():
+    long_cfg = load_config(CONFIGS / LONG_CONFIG)
+    plain = load_config("configs/persona_mix.yaml")
+    changed = {key for key in set(long_cfg) | set(plain) if long_cfg.get(key) != plain.get(key)}
+    assert changed == {"grpo", "out"}
+    assert long_cfg["out"] == f"results/{LONG_STAGE}"
+    assert plain["grpo"]["max_steps"] == 300
+    assert long_cfg["grpo"] == {**plain["grpo"], "max_steps": 600}
+    assert list(_long_runs()) == [f"grpo-persona-mix-s{seed}" for seed in LONG_SEEDS]
+
+
+def test_stored_600_step_runs_come_from_the_600_step_config():
+    runs = _long_runs()
+    stored = {path.parent.name: path for path in _stored(f"{LONG_STAGE}/*/summary.json")}
+    assert set(stored) == set(runs)
+    for name, path in stored.items():
+        assert _strip(_config(path), ("sweep",)) == _strip(runs[name], ("sweep",)), name
+        summary = json.loads(path.read_text(encoding="utf-8"))
+        assert summary["run_name"] == name and summary["reward_kind"] == "persona_mix"
+        assert parse_floor(summary["config"]) is None and "floor" not in summary
+
+
+def _keys(obj, prefix: str = "") -> set[str]:
+    """Every key of a nested mapping as a dotted path."""
+    if not isinstance(obj, dict):
+        return set()
+    return {
+        path
+        for key, value in obj.items()
+        for path in {f"{prefix}{key}", *_keys(value, f"{prefix}{key}.")}
+    }
+
+
+def test_stored_600_step_runs_name_no_job():
+    """The stored runs are the logged outputs as the trainer wrote them: no file names the
+    runner job that produced it or the directory it was fetched to."""
+    for name in _long_runs():
+        for file in RUN_FILES:
+            text = (RESULTS / LONG_STAGE / name / file).read_text(encoding="utf-8")
+            for token in ("manual__", JOB_FIELD, "results/fetched"):
+                assert token not in text, (name, file, token)
+
+
+def test_stored_600_step_runs_hold_the_files_and_fields_of_the_reported_runs():
+    """Logged outputs only, stored as under results/grpo: the same three files with the same
+    fields apart from the name of the runner job, and no checkpoint or adapter."""
+    reference = RESULTS / "grpo" / "grpo-persona-mix-s43"
+    ref_summary = json.loads((reference / "summary.json").read_text(encoding="utf-8"))
+    ref_curve = read_curve(reference / "curve.jsonl")
+    ref_log = read_curve(reference / "train_log.jsonl")
+    assert sorted(path.name for path in reference.iterdir()) == list(RUN_FILES)
+    for name in _long_runs():
+        run_dir = RESULTS / LONG_STAGE / name
+        assert sorted(path.name for path in run_dir.iterdir()) == list(RUN_FILES), name
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        assert list(summary) == [key for key in ref_summary if key != JOB_FIELD], name
+        assert _keys(summary["config"]) == _keys(ref_summary["config"]), name
+        assert set(summary["final"]) == set(ref_summary["final"]), name
+
+        curve = read_curve(run_dir / "curve.jsonl")
+        assert [point["step"] for point in curve] == list(range(0, 601, 25)), name
+        assert all(set(point) == set(ref_curve[0]) for point in curve), name
+        assert summary["curve"] == curve and summary["final"] == curve[-1], name
+        log = read_curve(run_dir / "train_log.jsonl")
+        assert [row["step"] for row in log] == list(range(5, 601, 5)), name
+        assert all(set(row) == set(ref_log[0]) for row in log), name
+    assert sorted(path.name for path in (RESULTS / LONG_STAGE).iterdir()) == sorted(_long_runs())
+
+
+def _fetched(name: str) -> Path | None:
+    """The fetched output directory of a run (job outputs are not committed)."""
+    hits = sorted((RESULTS / "fetched").glob(f"*/results/*/{name}/curve.jsonl"))
+    return hits[0].parent if len(hits) == 1 else None
+
+
+@pytest.mark.skipif(
+    any(_fetched(f"grpo-persona-mix-s{seed}") is None for seed in LONG_SEEDS),
+    reason="the fetched outputs of the 600-step runs are not on disk",
+)
+def test_stored_600_step_runs_are_the_logged_outputs_of_their_jobs():
+    for name in _long_runs():
+        fetched, stored = _fetched(name), RESULTS / LONG_STAGE / name
+        for file in RUN_FILES:  # the summary as well: the job is not named in it
+            assert (stored / file).read_bytes() == (fetched / file).read_bytes(), (name, file)
+
+
+def _long_checkpoints() -> dict[str, tuple[str, int]]:
+    """Policy name of every re-evaluated checkpoint of the 600-step runs: (run, step)."""
+    return {f"{run}-ckpt{step}": (run, step) for run in _long_runs() for step in LONG_CHECKPOINTS}
+
+
+def test_600_step_reeval_config_is_the_reeval_config_for_the_checkpoints():
+    long_cfg = load_config(CONFIGS / LONG_REEVAL_CONFIG)
+    plain = load_config("configs/reeval.yaml")
+    changed = {key for key in set(long_cfg) | set(plain) if long_cfg.get(key) != plain.get(key)}
+    assert changed == {"policies", "heldout", "out"}
+    assert long_cfg["out"] == "results/reeval_600"
+    assert long_cfg["heldout"] == {**plain["heldout"], "max_questions": 600}
+    assert long_cfg["policy"]["dtype"] == "float32"
+
+    checkpoints = _long_checkpoints()
+    assert len(checkpoints) == 18
+    policies = resolve_policies(long_cfg)
+    assert list(policies) == ["base", *checkpoints]
+    assert policies["base"]["adapter"] is None
+    data = Path(long_cfg["paths"]["data"])
+    train_cfg = load_config(CONFIGS / LONG_CONFIG)
+    assert LONG_CHECKPOINTS[-1] == train_cfg["grpo"]["max_steps"]
+    assert all(step % train_cfg["grpo"]["save_steps"] == 0 for step in LONG_CHECKPOINTS)
+    for name, (run, step) in checkpoints.items():
+        assert set(long_cfg["policies"][name]) == {"adapter", "curve", "step"}
+        assert Path(policies[name]["adapter"]) == data / "adapters" / run / f"checkpoint-{step}"
+        assert Path(policies[name]["curve"]) == data / "adapters" / run / "curve.jsonl"
+        # the sanity gate compares a checkpoint with the logged evaluation of its own step
+        assert policies[name]["step"] == step
+
+
+def _fetched_reeval(policy: str) -> Path | None:
+    """The fetched re-evaluation summary of a policy (job outputs are not committed)."""
+    hits = sorted((RESULTS / "fetched").glob(f"*/results/reeval/{policy}/summary.json"))
+    return hits[0] if len(hits) == 1 else None
+
+
+@pytest.mark.skipif(
+    any(_fetched_reeval(name) is None for name in _long_checkpoints()),
+    reason="the fetched re-evaluation of the 600-step checkpoints is not on disk",
+)
+def test_fetched_reevaluation_of_the_checkpoints_ran_the_600_step_reeval_config():
+    repo = load_config(CONFIGS / LONG_REEVAL_CONFIG)
+    for name in _long_checkpoints():
+        summary = json.loads(_fetched_reeval(name).read_text(encoding="utf-8"))
+        stored = summary["config"]
+        # a job re-evaluated the checkpoints of one run: its own entry is the one compared
+        assert _strip(stored, ("policies",)) == _strip(repo, ("policies",)), name
+        assert stored["policies"][name] == repo["policies"][name], name
+        assert summary["policy"] == name
+
+
+@pytest.mark.skipif(shutil.which("make") is None, reason="make is not installed")
+def test_make_grpo_persona_mix_600_runs_the_600_step_config():
+    def dry_run(*args: str) -> str:
+        command = ["make", "-n", *args, "PY=python"]
+        return subprocess.run(command, capture_output=True, text=True, check=True).stdout
+
+    call = "python -m goodhart.experiments.train_grpo --config configs/persona_mix_600.yaml"
+    assert dry_run("grpo-persona-mix-600").split() == call.split()
+    for seed in LONG_SEEDS:
+        assert dry_run("grpo-persona-mix-600", f"SEED={seed}").split() == [
+            *call.split(),
+            "--seed",
+            str(seed),
+        ]
+    assert LONG_CONFIG not in dry_run("grpo-all")
+
+
+@pytest.mark.skipif(shutil.which("make") is None, reason="make is not installed")
+def test_make_targets_of_the_600_step_reevaluation_and_its_reading():
+    def dry_run(*args: str) -> str:
+        command = ["make", "-n", *args, "PY=python"]
+        return subprocess.run(command, capture_output=True, text=True, check=True).stdout
+
+    assert dry_run("reeval-600").split() == [
+        *"python -m goodhart.experiments.reeval --config".split(),
+        f"configs/{LONG_REEVAL_CONFIG}",
+    ]
+    reading = "python -m goodhart.analysis.prereg_v2 --runs results/grpo_600 --reeval"
+    call = dry_run("prereg-v2").replace("\\\n", " ").split()
+    assert call == [
+        *reading.split(),
+        "results/reeval_600",
+        "results/reeval",
+        "--base-items",
+        "results/reeval/base/items.jsonl",
+    ]
+    replaced = dry_run("prereg-v2", "ARGS=--reeval one two").replace("\\\n", " ").split()
+    assert replaced[-3:] == ["--reeval", "one", "two"]
 
 
 # ----------------------------------------------------------------------------- reply floor

@@ -1405,7 +1405,7 @@ def _samples(known: Iterable[int], n: int = N) -> list[dict]:
     ]
 
 
-def test_known_stratum_from_the_base_samples(tmp_path):
+def test_known_stratum_from_the_base_samples(tmp_path, caplog):
     assert ays.known_stratum(None) == {"status": NOT_RUN, "reason": "no base samples given"}
     write_jsonl(tmp_path / "samples.jsonl", _samples(range(20)))
     stratum = ays.known_stratum(tmp_path / "samples.jsonl", tmp_path / "absent.json")
@@ -1415,8 +1415,10 @@ def test_known_stratum_from_the_base_samples(tmp_path):
     write_json(tmp_path / "m2.json", {"knows_stratum": {"n_stratum": 20}})
     assert ays.known_stratum(tmp_path / "samples.jsonl", tmp_path / "m2.json")["matches_committed"]
     # the committed analysis has 340 questions in the stratum
-    committed = ays.known_stratum(tmp_path / "samples.jsonl")
+    with caplog.at_level("WARNING", logger=ays.__name__):
+        committed = ays.known_stratum(tmp_path / "samples.jsonl")
     assert committed["committed_n_stratum"] == 340 and committed["matches_committed"] is False
+    assert "20 questions known in 8 of 8 samples, the committed analysis 340" in caplog.text
 
     write_jsonl(tmp_path / "seven.jsonl", _samples(range(20))[:-1])
     short = ays.known_stratum(tmp_path / "seven.jsonl")

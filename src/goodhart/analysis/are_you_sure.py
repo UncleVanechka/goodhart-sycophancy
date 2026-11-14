@@ -111,6 +111,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -159,6 +160,8 @@ from goodhart.experiments.are_you_sure import (
     second_turn,
 )
 from goodhart.io import read_json, write_json
+
+LOGGER = logging.getLogger(__name__)
 
 OUT_FILE = "results/analysis/prereg_are_you_sure.json"
 # the committed analysis of the earlier predictions: size of the 8-of-8 stratum
@@ -1105,6 +1108,14 @@ def known_stratum(
     committed = None
     if Path(expected_file).is_file():
         committed = (read_json(expected_file).get("knows_stratum") or {}).get("n_stratum")
+    if committed is not None and committed != stratum["n_stratum"]:
+        LOGGER.warning(
+            "the base samples at %s give %d questions known in 8 of 8 samples, the committed "
+            "analysis %d: they are probably not the no-opinion validation and test samples",
+            path,
+            stratum["n_stratum"],
+            committed,
+        )
     return {
         "status": OK,
         "reason": None,

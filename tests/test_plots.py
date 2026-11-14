@@ -280,3 +280,151 @@ def test_load_results_attaches_reward_kind(tmp_path: Path) -> None:
     (run / "summary.json").write_text(json.dumps({"alpha": 0.0, "reward_kind": "persona_mix"}))
     rows = plots.load_results(tmp_path)["grpo"]["grpo-persona-mix"]
     assert rows[0]["alpha"] == 0.0 and rows[0]["reward_kind"] == "persona_mix"
+
+
+def _write_run(root: Path, subdir: str, name: str, rows: list[dict], summary: dict) -> None:
+    run = root / subdir / name
+    run.mkdir(parents=True)
+    (run / "curve.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    (run / "summary.json").write_text(json.dumps(summary))
+
+
+def _steps(last: int, **extra) -> list[dict]:
+    return [
+        {"step": s, "proxy_mean": 7.8 + s / 1000, "gold_accuracy": 0.65, **extra}
+        for s in range(0, last + 1, 100)
+    ]
+
+
+FLOOR = {"min_words": 30, "value": 1.0}
+MIX = {"alpha": 0.0, "reward_kind": "persona_mix"}
+
+
+def test_load_results_reads_the_600_step_and_floor_directories(tmp_path: Path) -> None:
+    floor_summary = {
+        "alpha": 0.0,
+        "reward_kind": "immediate",
+        "floor": FLOOR,
+        "config": {"reward": {"kind": "immediate", "alpha": 0.0, "floor": FLOOR}},
+    }
+    _write_run(tmp_path, "grpo", "grpo-persona-mix", _steps(300), MIX)
+    _write_run(tmp_path, "grpo_600", "grpo-persona-mix-s44", _steps(600), MIX)
+    _write_run(tmp_path, "grpo_600", "grpo-persona-mix", _steps(600), MIX)
+    _write_run(tmp_path, "grpo_floor", "grpo-immediate-floor30", _steps(300), floor_summary)
+    _write_run(tmp_path, "grpo_first_pass", "grpo-delayed-a0.3", _steps(300), {"alpha": 0.3})
+    grpo = plots.load_results(tmp_path)["grpo"]
+    assert list(grpo) == [
+        "grpo-persona-mix",
+        "grpo_600/grpo-persona-mix",  # a name taken by an earlier directory gets its own
+        "grpo-persona-mix-s44",
+        "grpo-immediate-floor30",
+    ]
+    assert grpo["grpo-immediate-floor30"][0]["reward_floor"] == FLOOR
+    assert "reward_floor" not in grpo["grpo-persona-mix"][0]
+    assert [r["step"] for r in grpo["grpo-persona-mix-s44"]][-1] == 600
+
+
+def test_summary_fields_find_the_floor_at_top_level_or_in_config(tmp_path: Path) -> None:
+    path = tmp_path / "summary.json"
+    path.write_text(json.dumps({"alpha": 0.0, "floor": FLOOR}))
+    assert plots._summary_fields(path) == {"alpha": 0.0, "reward_floor": FLOOR}
+    path.write_text(json.dumps({"config": {"reward": {"kind": "immediate", "floor": FLOOR}}}))
+    assert plots._summary_fields(path) == {"reward_kind": "immediate", "reward_floor": FLOOR}
+    path.write_text(json.dumps({"alpha": 0.0, "floor": None, "config": {"reward": {}}}))
+    assert plots._summary_fields(path) == {"alpha": 0.0}
+    assert plots._summary_fields(tmp_path / "missing.json") == {}
+
+
+def test_floor_runs_form_a_series_after_the_persona_mixture(tmp_path: Path) -> None:
+    immediate = _steps(300, alpha=0.0, reward_kind="immediate")
+    floor = _steps(300, alpha=0.0, reward_kind="immediate", reward_floor=FLOOR)
+    cfg_floor = [{"step": 0, "config": {"reward": {"kind": "immediate", "floor": FLOOR}}}]
+    assert plots._group_of_run("grpo-immediate", immediate) == 0.0
+    assert plots._group_of_run("grpo-immediate-floor30", floor) == "reply_floor"
+    assert plots._group_of_run("x", cfg_floor) == "reply_floor"
+    assert plots._floor_of_run(immediate) is None
+    grpo = {
+        "grpo-immediate-floor30": floor,
+        "grpo-immediate-floor30-s43": floor,
+        "grpo-immediate": immediate,
+        "grpo-persona-mix": _steps(300, **MIX),
+        "grpo-delayed-a0.3": _steps(300, alpha=0.3),
+    }
+    groups = plots._group_runs(grpo)
+    assert list(groups) == [0.0, 0.3, "persona_mix", "reply_floor"]
+    assert list(groups["reply_floor"]) == ["grpo-immediate-floor30", "grpo-immediate-floor30-s43"]
+    assert plots._group_label("reply_floor", 3) == "GRPO · α = 0 + reply floor (3 runs)"
+    bon = [{"curves": {f"alpha={a}": {} for a in (0.0, 0.3, 0.6, 1.0)}}]
+    colors = plots._series_colors(bon, grpo)
+    assert list(colors) == [0.0, 0.3, 0.6, 1.0, "persona_mix", "reply_floor"]
+    assert colors["persona_mix"] == plots.PALETTE[4]  # the floor takes the next slot
+    assert colors["reply_floor"] == plots.PALETTE[5]
+    _assert_png(plots.plot_goodhart_frontier([], grpo, tmp_path / "f.png"))
+    _assert_png(plots.plot_grpo_curves(grpo, tmp_path / "c.png"))
+
+
+def test_longer_runs_extend_their_series(tmp_path: Path) -> None:
+    runs = {
+        "grpo-persona-mix": _steps(300, **MIX),
+        "grpo-persona-mix-s43": _steps(300, **MIX),
+        "grpo-persona-mix-s44": _steps(600, **MIX),
+        "grpo-persona-mix-s45": _steps(600, **MIX),
+        "grpo-persona-mix-s46": _steps(600, **MIX),
+    }
+    groups = plots._group_runs(runs)
+    assert list(groups) == ["persona_mix"] and len(groups["persona_mix"]) == 5
+    extent = plots._run_extent(groups["persona_mix"])
+    assert extent == (3, 600)
+    label = plots._group_label("persona_mix", 5, extent)
+    assert label == "GRPO · persona mix (5 runs, 3 to step 600)"
+    short = {k: runs[k] for k in ("grpo-persona-mix", "grpo-persona-mix-s43")}
+    assert plots._run_extent(short) is None
+    assert plots._run_extent({"a": _steps(600)}) is None
+    agg = plots._aggregate(groups["persona_mix"], lambda r: plots._metric(r, "gold_accuracy"))
+    assert [a[0] for a in agg] == [0, 100, 200, 300, 400, 500, 600]
+    assert [a[4] for a in agg] == [5, 5, 5, 5, 3, 3, 3]
+    _assert_png(plots.plot_grpo_curves(runs, tmp_path / "c.png"))
+
+
+def test_place_labels_never_overlaps(tmp_path: Path) -> None:
+    plt = plots._plt()
+    fig, ax = plt.subplots(figsize=(4, 3))
+    ax.plot([0, 1], [0, 1])
+    fig.tight_layout()
+    labels = [(0.5, 0.5, "N=1", True)] * 3  # one text at one point is drawn once
+    labels += [(0.5, 0.5, f"step {s}", True) for s in (100, 200)]
+    labels += [(0.5, 0.5, f"step {s}", False) for s in range(300, 1300, 100)]
+    plots._place_labels(fig, ax, labels)
+    texts = [t.get_text() for t in ax.texts]
+    assert texts.count("N=1") == 1
+    assert {"step 100", "step 200"} <= set(texts)
+    assert len(texts) == len(plots._LABEL_OFFSETS)  # optional labels without room are left out
+    renderer = fig.canvas.get_renderer()
+    boxes = [t.get_window_extent(renderer) for t in ax.texts]
+    assert not any(a.overlaps(b) for i, a in enumerate(boxes) for b in boxes[i + 1 :])
+    plt.close(fig)
+
+
+def test_frontier_labels_the_shared_start_once(tmp_path: Path, monkeypatch) -> None:
+    texts: list[str] = []
+    save = plots._save
+
+    def capture(fig, out):
+        texts.extend(t.get_text() for t in fig.axes[0].texts)
+        return save(fig, out)
+
+    monkeypatch.setattr(plots, "_save", capture)
+
+    def run(gold_per_step: float, **extra) -> list[dict]:
+        return [
+            dict(r, gold_accuracy=0.65 + gold_per_step * r["step"], **extra) for r in _steps(300)
+        ]
+
+    grpo = {
+        "grpo-immediate": run(-2e-4, alpha=0.0),
+        "grpo-delayed-a0.3": run(-1e-4, alpha=0.3),
+        "grpo-immediate-floor30": run(1e-4, alpha=0.0, reward_floor=FLOOR),
+    }
+    _assert_png(plots.plot_goodhart_frontier([], grpo, tmp_path / "f.png"))
+    assert texts.count("step 0") == 1
+    assert texts.count("step 300") == 3

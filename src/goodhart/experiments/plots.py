@@ -34,6 +34,10 @@ _ALPHA_KEY = re.compile(r"alpha\s*=\s*([0-9.eE+-]+)")
 _ALPHA_RUN = re.compile(r"-a(\d+(?:\.\d+)?)$")
 _STEP_KEYS = ("step", "global_step", "steps")
 
+GRPO_DIRS = ("grpo", "grpo_600", "grpo_floor")
+"""Directories under ``results/`` whose GRPO runs are drawn: the 300-step runs, the 600-step
+persona mixture (PREREG v2) and the reply-floor arm (PREREG v3)."""
+
 
 # ----------------------------------------------------------------------------- loading
 
@@ -53,20 +57,38 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def _summary_meta(path: Path) -> tuple[float | None, str | None]:
-    """``(alpha, reward kind)`` of a run from ``summary.json`` (top level or ``config.reward``)."""
+def _summary_fields(path: Path) -> dict[str, Any]:
+    """Run metadata the curve rows lack, from ``summary.json`` (top level or ``config.reward``).
+
+    :return: ``alpha``, ``reward_kind`` and ``reward_floor`` (the reply floor of the reward),
+        each only when the summary records it
+    """
     if not path.is_file():
-        return None, None
+        return {}
     meta = _read_json(path)
     reward = (meta.get("config") or {}).get("reward") or {}
     reward = reward if isinstance(reward, dict) else {}
+    fields: dict[str, Any] = {}
     alpha = meta.get("alpha")
     if alpha is None:
         alpha = reward.get("alpha")
+    if alpha is not None:
+        fields["alpha"] = float(alpha)
     kind = meta.get("reward_kind")
     if kind is None:
         kind = reward.get("kind")
-    return (None if alpha is None else float(alpha)), (None if kind is None else str(kind))
+    if kind is not None:
+        fields["reward_kind"] = str(kind)
+    floor = meta.get("floor") or reward.get("floor")
+    if floor:
+        fields["reward_floor"] = floor
+    return fields
+
+
+def _summary_meta(path: Path) -> tuple[float | None, str | None]:
+    """``(alpha, reward kind)`` of a run from ``summary.json`` (top level or ``config.reward``)."""
+    fields = _summary_fields(path)
+    return fields.get("alpha"), fields.get("reward_kind")
 
 
 def _summary_alpha(path: Path) -> float | None:
@@ -85,9 +107,11 @@ def load_results(results_dir: str | Path) -> dict[str, Any]:
     """Read every results JSON under ``results_dir``.
 
     Returns ``{"baseline": [payload...], "bon": [payload...], "grpo": {run_name: [row...]}}``.
-    Baseline and BoN payloads are sorted by model name; GRPO rows (``curve.jsonl`` per run
-    directory) are sorted by step and carry the run's ``alpha`` and ``reward_kind`` from
-    ``summary.json`` when the rows lack them. Missing directories give empty containers.
+    Baseline and BoN payloads are sorted by model name. GRPO runs are read from every
+    directory of ``GRPO_DIRS`` (``curve.jsonl`` per run directory); a run name already taken
+    by an earlier directory is prefixed with its own directory. Rows are sorted by step and
+    carry the run's ``alpha``, ``reward_kind`` and ``reward_floor`` from ``summary.json`` when
+    the rows lack them. Missing directories give empty containers.
     """
     root = Path(results_dir)
     baseline = (
@@ -105,18 +129,17 @@ def load_results(results_dir: str | Path) -> dict[str, Any]:
         else []
     )
     grpo: dict[str, list[dict[str, Any]]] = {}
-    if (root / "grpo").is_dir():
-        for curve in sorted((root / "grpo").glob("*/curve.jsonl")):
+    for subdir in GRPO_DIRS:
+        for curve in sorted((root / subdir).glob("*/curve.jsonl")):
             rows = _read_jsonl(curve)
             if not rows:
                 continue
-            alpha, kind = _summary_meta(curve.parent / "summary.json")
+            fields = _summary_fields(curve.parent / "summary.json")
             for row in rows:
-                if alpha is not None:
-                    row.setdefault("alpha", alpha)
-                if kind is not None:
-                    row.setdefault("reward_kind", kind)
-            grpo[curve.parent.name] = sorted(rows, key=_row_step)
+                for key, value in fields.items():
+                    row.setdefault(key, value)
+            name = curve.parent.name
+            grpo[f"{subdir}/{name}" if name in grpo else name] = sorted(rows, key=_row_step)
     baseline.sort(key=lambda p: str(p.get("model", "")))
     bon.sort(key=lambda p: str(p.get("model", "")))
     return {"baseline": baseline, "bon": bon, "grpo": grpo}
@@ -181,11 +204,16 @@ def _sorted_alpha_keys(curves: dict[str, Any]) -> list[str]:
     return sorted(curves, key=lambda k: (_alpha_of_key(k) is None, _alpha_of_key(k) or 0.0, k))
 
 
-# Reward kinds whose α says nothing about the objective; their runs form a series of their own
-_KIND_GROUPS: dict[str, str] = {"persona_mix": "persona mix"}
+# Series that α alone does not name, each with its legend text: a reward kind whose α says
+# nothing about the objective, and the reply floor added to the α = 0 reward (PREREG v3).
+# Their order here is their order in the legend and in the palette, after the α series
+_NAMED_GROUPS: dict[str, str] = {
+    "persona_mix": "persona mix",
+    "reply_floor": "α = 0 + reply floor",
+}
 
 Group = float | str | None
-"""A GRPO series: the α of a delayed/immediate run, a key of ``_KIND_GROUPS``, or ``None``."""
+"""A GRPO series: the α of a delayed/immediate run, a key of ``_NAMED_GROUPS``, or ``None``."""
 
 
 def _kind_of_run(run_name: str, rows: list[dict[str, Any]]) -> str | None:
@@ -199,27 +227,40 @@ def _kind_of_run(run_name: str, rows: list[dict[str, Any]]) -> str | None:
     return None if kind is None else str(kind)
 
 
+def _floor_of_run(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Reply floor of a run's reward (``reward_floor`` of its rows or ``config.reward.floor``)."""
+    first = rows[0] if rows else {}
+    floor = first.get("reward_floor")
+    if floor is None:
+        reward = first.get("config", {}).get("reward", {}) if isinstance(first, dict) else {}
+        floor = reward.get("floor") if isinstance(reward, dict) else None
+    return floor or None
+
+
 def _group_of_run(run_name: str, rows: list[dict[str, Any]]) -> Group:
-    """Series a run belongs to: its reward kind for a persona mixture, otherwise its α."""
+    """Series a run belongs to: the named series of a persona mixture or a reply floor, else α."""
     kind = _kind_of_run(run_name, rows)
-    if kind in _KIND_GROUPS:
+    if kind in _NAMED_GROUPS:
         return kind
+    if _floor_of_run(rows) is not None:
+        return "reply_floor"
     return _alpha_of_run(run_name, rows)
 
 
 def _group_order(group: Group) -> tuple[int, float, str]:
-    """α groups first, ascending; then named kinds; runs without either last."""
+    """α groups first, ascending; then named series in ``_NAMED_GROUPS`` order; then the rest."""
     if isinstance(group, float):
         return (0, group, "")
     if isinstance(group, str):
-        return (1, 0.0, group)
+        names = list(_NAMED_GROUPS)
+        return (1, float(names.index(group) if group in names else len(names)), group)
     return (2, 0.0, "")
 
 
 def _group_runs(
     grpo: dict[str, list[dict[str, Any]]],
 ) -> dict[Group, dict[str, list[dict[str, Any]]]]:
-    """GRPO runs grouped by series (α, or reward kind for a persona mixture), ``_group_order``."""
+    """GRPO runs grouped by series (α, or a ``_NAMED_GROUPS`` key), in ``_group_order``."""
     groups: dict[Group, dict[str, list[dict[str, Any]]]] = {}
     for run_name, rows in grpo.items():
         groups.setdefault(_group_of_run(run_name, rows), {})[run_name] = rows
@@ -247,15 +288,29 @@ def _aggregate(
 def _series_colors(
     bon: list[dict[str, Any]], grpo: dict[str, list[dict[str, Any]]]
 ) -> dict[Group, str]:
-    """One colour per series (Best-of-N α, GRPO α or reward kind), shared by every figure."""
+    """One colour per series (Best-of-N α, GRPO α or named series), shared by every figure."""
     groups: set[Group] = {_alpha_of_key(k) for payload in bon for k in payload.get("curves", {})}
     groups |= {_group_of_run(name, rows) for name, rows in grpo.items()}
     return {g: PALETTE[i % len(PALETTE)] for i, g in enumerate(sorted(groups, key=_group_order))}
 
 
-def _group_label(group: Group, n_runs: int) -> str:
+def _run_extent(runs: dict[str, list[dict[str, Any]]]) -> tuple[int, float] | None:
+    """``(k, last step)`` when only k of a series' runs reach its last step, else ``None``."""
+    last = [max(_row_step(r) for r in rows) for rows in runs.values() if rows]
+    if len(set(last)) < 2:
+        return None
+    top = max(last)
+    return sum(step == top for step in last), top
+
+
+def _group_label(group: Group, n_runs: int, extent: tuple[int, float] | None = None) -> str:
+    """Legend text of a series; ``extent`` (from :func:`_run_extent`) names its longer runs."""
     label = f"GRPO · {_fmt_group(group)}"
-    return f"{label} ({n_runs} runs)" if n_runs > 1 else label
+    if n_runs <= 1:
+        return label
+    if extent is not None:
+        return f"{label} ({n_runs} runs, {extent[0]} to step {extent[1]:g})"
+    return f"{label} ({n_runs} runs)"
 
 
 def _sorted_n(curve: dict[str, Any]) -> list[str]:
@@ -271,7 +326,7 @@ def _fmt_alpha(alpha: float | None) -> str:
 
 
 def _fmt_group(group: Group) -> str:
-    return _KIND_GROUPS[group] if isinstance(group, str) else _fmt_alpha(group)
+    return _NAMED_GROUPS[group] if isinstance(group, str) else _fmt_alpha(group)
 
 
 def _plt():
@@ -316,15 +371,51 @@ def _line_kwargs(color: str, marker: str, dashed: bool = False) -> dict[str, Any
     }
 
 
-def _annotate(ax, x: float, y: float, text: str) -> None:
-    ax.annotate(
+def _annotate(ax, x: float, y: float, text: str, offset: tuple[float, float] = (5, 5)) -> Any:
+    return ax.annotate(
         text,
         (x, y),
         textcoords="offset points",
-        xytext=(5, 5),
+        xytext=offset,
+        ha="right" if offset[0] < 0 else "left",
         fontsize=8,
         color=TEXT_SECONDARY,
     )
+
+
+# Where a point label may go, in points from the point: the first one free of other labels wins
+_LABEL_OFFSETS = ((5, 5), (5, -12), (-5, 5), (-5, -12), (5, 15), (5, -22))
+
+Label = tuple[float, float, str, bool]
+"""A point label: ``(x, y, text, required)``; an optional label is dropped when it has no room."""
+
+
+def _place_labels(fig, ax, labels: list[Label]) -> None:
+    """Annotate points so that no two labels overlap.
+
+    A label repeating the text of one already placed at the same point is left out. Required
+    labels go first, each at the first offset of ``_LABEL_OFFSETS`` where it overlaps no placed
+    label, or at the first offset when none is free; optional labels without a free offset are
+    left out. The check is in display coordinates, so it runs once the layout is final.
+    """
+    renderer = fig.canvas.get_renderer()
+    boxes: list[Any] = []
+    seen: list[tuple[str, Any]] = []
+    for x, y, text, required in sorted(labels, key=lambda label: not label[3]):
+        point = ax.transData.transform((x, y))
+        if any(t == text and abs(point - p).max() < 2 for t, p in seen):
+            continue
+        seen.append((text, point))
+        for offset in _LABEL_OFFSETS:
+            ann = _annotate(ax, x, y, text, offset)
+            box = ann.get_window_extent(renderer)
+            if not any(box.overlaps(other) for other in boxes):
+                boxes.append(box)
+                break
+            ann.remove()
+        else:
+            if required:
+                boxes.append(_annotate(ax, x, y, text).get_window_extent(renderer))
 
 
 def _save(fig, out: str | Path) -> Path:
@@ -428,6 +519,7 @@ def plot_goodhart_frontier(
 
     fig, ax = plt.subplots(figsize=(9, 5.2))
     plotted = False
+    labels: list[Label] = []
     for idx, payload in enumerate(bon):
         model = _short_model(payload.get("model", f"model {idx}"))
         marker = MARKERS[idx % len(MARKERS)]
@@ -448,8 +540,8 @@ def plot_goodhart_frontier(
                 label=f"{model} · {_fmt_alpha(alpha)} (BoN)",
                 **_line_kwargs(color_of[alpha], marker),
             )
-            for n, x, y in pts:
-                _annotate(ax, x, y, f"N={n}")
+            labels += [(x, y, f"N={n}", True) for n, x, y in pts]
+    start_labelled = False  # every GRPO series starts from the untrained policy: label it once
     for idx, (group, runs) in enumerate(_group_runs(grpo).items()):
         xs = _aggregate(runs, lambda r: _metric(r, "proxy_mean"))
         ys = _aggregate(runs, lambda r: _metric(r, "gold_accuracy"))
@@ -473,13 +565,17 @@ def plot_goodhart_frontier(
         ax.plot(
             [p[1] for p in pts],
             [p[2] for p in pts],
-            label=_group_label(group, len(runs)),
+            label=_group_label(group, len(runs), _run_extent(runs)),
             **_line_kwargs(color, marker, dashed=True),
         )
         stride = max(1, len(pts) // 2)  # first, middle and last step keep the labels readable
         for i, (step, x, y) in enumerate(pts):
-            if i == 0 or i == len(pts) - 1 or i % stride == 0:
-                _annotate(ax, x, y, f"step {step:g}")
+            if i == 0:
+                if not start_labelled:
+                    labels.append((x, y, f"step {step:g}", True))
+                start_labelled = True
+            elif i == len(pts) - 1 or i % stride == 0:
+                labels.append((x, y, f"step {step:g}", i == len(pts) - 1))
     if not plotted:
         plt.close(fig)
         return None
@@ -489,6 +585,7 @@ def plot_goodhart_frontier(
     ax.set_title("Goodhart frontier: gold vs proxy as optimization strength grows")
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=8)
     fig.tight_layout()
+    _place_labels(fig, ax, labels)
     return _save(fig, out)
 
 
@@ -499,7 +596,7 @@ def plot_grpo_curves(
 ) -> Path | None:
     """Proxy, informed judge, training reward, gold, sycophancy and held-out metrics by step.
 
-    One line per series (an α, or the reward kind for a persona mixture): the mean over that
+    One line per series (an α, a persona mixture or a reply floor): the mean over that
     series' runs, with a min–max band and thin individual runs when there are several. The proxy
     panel is the immediate judge, the informed panel the judge
     who knows the truth (the delayed signal), the training-reward panel what the optimizer saw
@@ -529,7 +626,7 @@ def plot_grpo_curves(
     for idx, (group, runs) in enumerate(_group_runs(grpo).items()):
         color = color_of[group]
         marker = MARKERS[idx % len(MARKERS)]
-        label = _group_label(group, len(runs))
+        label = _group_label(group, len(runs), _run_extent(runs))
         for ax, (metric, _) in zip(axes, panels, strict=True):
             value = getters.get(metric) or (lambda r, key=metric: _metric(r, key))
             agg = _aggregate(runs, value)

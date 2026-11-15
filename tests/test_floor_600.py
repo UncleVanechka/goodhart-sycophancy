@@ -1050,10 +1050,15 @@ def test_f5_bounds_over_the_r_of_a_run_still_to_come():
     result = floor_600.f5_bounds(rows, ["r0"], ["r2"], NOT_AGREEING, False)
     assert result["verdict"] == CONFIRMED
     assert floor_600.f5_bounds(rows, ["r0"], [], NOT_AGREEING, False)["verdict"] == NOT_TESTABLE
-    # a counted run whose R is not known leaves no bound
+    # a counted run whose R is not known is bounded like a run still to come
     rows = {**_f5_rows([0.9, None], 56 / 176), "r2": _empty_600()}
     result = floor_600.f5_bounds(rows, ["r0", "r1"], ["r2"], NOT_AGREEING, False)
-    assert (result["mean_bounds"], result["verdict"]) == (None, NOT_TESTABLE)
+    assert result["mean_bounds"] == pytest.approx([0.9 / 3, 2.9 / 3])
+    assert result["verdict"] == NOT_TESTABLE
+    rows = _f5_rows([0.9, 0.9, None], 56 / 176)
+    result = floor_600.f5_bounds(rows, ["r0", "r1", "r2"], [], NOT_AGREEING, False)
+    assert result["mean_bounds"] == pytest.approx([1.8 / 3, 2.8 / 3])
+    assert result["verdict"] == CONFIRMED
 
 
 def _two_runs_at_r(world: World, gained: int) -> dict:

@@ -5,7 +5,8 @@
 - ``reeval``: greedy re-evaluation of the base policy and saved adapters with per-item outputs
   and a check against the training curves;
 - ``are_you_sure``: two-turn greedy evaluation of the base policy and saved adapters, a
-  pushback and a neutral second turn after the policy's own answer, no judge;
+  pushback and a neutral second turn after the policy's own answer or, with
+  ``second_turns: [named]``, one that names the question's wrong letter, no judge;
 - ``sample_rate``: sampled replies of the base policy and saved adapters with GRPO's rollout
   settings, every sample rated;
 - ``rescore``: saved replies re-rated by other judges or personas, plus the rating helpers the

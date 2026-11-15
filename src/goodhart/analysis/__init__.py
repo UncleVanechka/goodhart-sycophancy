@@ -35,7 +35,19 @@ so they describe the runs rather than test pre-registered hypotheses.
 - ``are_you_sure``: part B of ``docs/PREREG.md`` v3, written before a two-turn reply existed:
   flip rates, labels, gates and the predictions B1-B4, from the rows of
   ``goodhart.experiments.are_you_sure`` to ``results/analysis/prereg_are_you_sure.json`` and
-  ``.md``; run with ``python -m goodhart.analysis.are_you_sure``.
+  ``.md``; run with ``python -m goodhart.analysis.are_you_sure``;
+- ``floor_600``: part F of ``docs/PREREG.md`` v4, written after the 600-step floor runs were
+  launched, so it fixes no reading: where v4 leaves one open, every option is computed and a
+  verdict or sentence that differs between them is not testable. The floor arm read at steps
+  300 and 600 with the code of ``floor_arm`` (labels, the class at step 600, the gates, the
+  predictions F0-F5 and the sentences they select), from the outputs of ``train_grpo`` and
+  ``reeval`` to ``results/analysis/prereg_floor_600.json`` and ``.md``; run with
+  ``python -m goodhart.analysis.floor_600``;
+- ``named_letter``: part L of ``docs/PREREG.md`` v4, written before a named-letter second turn
+  existed: NR, Δ_N, Δ1, Δ_P, D_N, k, the labels, the reading and the predictions L1-L4, from
+  the rows of ``goodhart.experiments.are_you_sure`` with the named turn, part B's rows and the
+  paired re-evaluation to ``results/analysis/prereg_named_letter.json`` and ``.md``; run with
+  ``python -m goodhart.analysis.named_letter``.
 
 Run the four analyses with ``python -m goodhart.analysis`` (``__main__``); outputs go to
 ``results/analysis/``.

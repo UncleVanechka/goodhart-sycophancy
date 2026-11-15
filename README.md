@@ -97,6 +97,15 @@ make reeval-floor                # its endpoint re-evaluation, configs/reeval_fl
 make are-you-sure                # two-turn evaluation of the saved adapters, configs/are_you_sure.yaml -> results/are_you_sure/
 make prereg-floor                # registered reading of the floor arm (CPU) -> results/analysis/prereg_floor.{json,md}
 make prereg-are-you-sure         # registered reading of the two-turn evaluation (CPU) -> results/analysis/prereg_are_you_sure.{json,md}
+
+# registered in docs/PREREG.md v4, part F; not part of grpo-all (GPU, except the reading)
+make grpo-floor-600              # reply-floor arm to 600 steps, configs/grpo_floor_600.yaml -> results/grpo_floor_600/ (then SEED=43 and SEED=44)
+make reeval-floor-600            # re-evaluation of checkpoint 300 and the final adapter, configs/reeval_floor_600.yaml -> results/reeval_floor_600/
+make prereg-floor-600            # registered reading of the 600-step floor arm (CPU) -> results/analysis/prereg_floor_600.{json,md}
+
+# registered in docs/PREREG.md v4, part L; not part of grpo-all (GPU, except the reading)
+make are-you-sure-named          # a second turn naming the question's wrong letter, configs/are_you_sure_named.yaml -> results/are_you_sure_named/
+make prereg-named-letter         # registered reading of the named-letter turn (CPU) -> results/analysis/prereg_named_letter.{json,md}
 ```
 
 The training and Best-of-N configs in `configs/` (`baseline`, `bon`, `grpo`, `mitigation`,
@@ -109,6 +118,14 @@ The floor runs' logged outputs are stored in `results/grpo_floor/` and the regis
 of both experiments in `results/analysis/prereg_floor.{json,md}` and
 `prereg_are_you_sure.{json,md}`; the re-evaluation and two-turn rows they read are not in the
 repository.
+`grpo_floor_600.yaml` and `reeval_floor_600.yaml` belong to part F of docs/PREREG.md v4: three
+new floor runs to 600 steps and the re-evaluation of their checkpoint 300 and final adapter (and
+of the last checkpoint of a run cut short); `make prereg-floor-600` reads them against the frozen
+base rows of v3.1, with the v3 floor runs for the step-0 comparison.
+`are_you_sure_named.yaml` belongs to part L of docs/PREREG.md v4: it decodes turn 1 again and
+one second turn built from each question's wrong-opinion record in `data/prompts.jsonl`, and
+`make prereg-named-letter` reads its rows with part B's rows as controls and the paired
+re-evaluation for the single-turn rate.
 `persona_mix_600.yaml` and `reeval_600.yaml` belong to the three 600-step persona-mixture
 runs registered in docs/PREREG.md v2. Their logged outputs are stored in `results/grpo_600/`
 and their registered reading in `results/analysis/prereg_v2.{json,md}`, written by

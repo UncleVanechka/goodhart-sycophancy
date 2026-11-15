@@ -255,16 +255,25 @@ def read_rows(path: Path) -> tuple[list[dict], str | None]:
     return rows, None
 
 
-def _row_problem(rows: Sequence[dict], n_questions: int | None) -> str | None:
-    """What keeps ``rows`` from being one complete row per question; ``None`` when nothing."""
+def row_keys(kinds: Sequence[str] = KINDS) -> tuple[str, ...]:
+    """The fields every row of a stage that decoded the second turns ``kinds`` has."""
+    return (*ROW_KEYS[: -len(KINDS)], *(f"{kind}_parsed" for kind in kinds))
+
+
+def _row_problem(
+    rows: Sequence[dict], n_questions: int | None, kinds: Sequence[str] = KINDS
+) -> str | None:
+    """What keeps ``rows`` from being one complete row per question with a reply to every
+    second turn of ``kinds``; ``None`` when nothing."""
     if not rows:
         return "no rows"
-    absent = sorted({key for row in rows for key in ROW_KEYS if key not in row})
+    keys = row_keys(kinds)
+    absent = sorted({key for row in rows for key in keys if key not in row})
     if absent:
         return f"rows without {', '.join(absent)}"
     if len({row["record_id"] for row in rows}) != len(rows):
         return "a record appears more than once"
-    for kind in KINDS:
+    for kind in kinds:
         empty = sum(not isinstance(row.get(f"{kind}_text"), str) for row in rows)
         if empty:
             return f"{empty} of {len(rows)} rows have no {kind} reply"
@@ -287,13 +296,17 @@ def _read_summary(path: Path) -> tuple[dict | None, str | None]:
 
 
 def load_policy(
-    stage_dir: str | Path, name: str, n_questions: int | None = N_QUESTIONS
+    stage_dir: str | Path,
+    name: str,
+    n_questions: int | None = N_QUESTIONS,
+    kinds: Sequence[str] = KINDS,
 ) -> PolicyInput:
     """Policy ``name`` of the stage directory: ``not run`` without ``items.jsonl`` (the
     reason says so when the stage left an unfinished file), ``incomplete`` when its rows are
-    not one readable row per question with both second-turn replies (``n_questions`` of them
-    unless it is ``None``), else ``ok`` with the rows by record id. A missing summary, one
-    whose counts are not those of the rows, and rows that name another policy are notes."""
+    not one readable row per question with the reply to every second turn of ``kinds``
+    (``n_questions`` of them unless it is ``None``), else ``ok`` with the rows by record id.
+    A missing summary, one whose counts are not those of the rows, and rows that name another
+    policy are notes."""
     folder = Path(stage_dir) / name
     summary, note = _read_summary(folder / "summary.json")
     if not (folder / "items.jsonl").is_file():
@@ -304,10 +317,11 @@ def load_policy(
     rows, problem = read_rows(folder / "items.jsonl")
     if problem is not None:
         problem = f"{len(rows)} rows read, then {problem}"
-    problem = problem or _row_problem(rows, n_questions)
+    problem = problem or _row_problem(rows, n_questions, kinds)
     if problem is not None:
         return PolicyInput(name, INCOMPLETE, problem, summary=summary, notes=notes)
-    if summary is not None and "counts" in summary and summary["counts"] != outcome_counts(rows):
+    counts = outcome_counts(rows, kinds)
+    if summary is not None and "counts" in summary and summary["counts"] != counts:
         notes.append("the counts of summary.json are not those of the rows")
     if any(row.get("policy") != name for row in rows):
         notes.append("rows of items.jsonl name another policy")
@@ -456,11 +470,19 @@ def common_ids(base: Items, policy: Items, ids: Iterable[str] | None = None) -> 
     )
 
 
-def _shift(base: Items, policy: Items, ids: Sequence[str], kind: str, reading: str) -> list[float]:
-    """Per question of ``ids``: 1 when only the policy flips, -1 when only the base does."""
+def _shift(
+    base: Items,
+    policy: Items,
+    ids: Sequence[str],
+    kind: str,
+    reading: str,
+    outcome: Callable[[dict, str, str], bool] = flipped,
+) -> list[float]:
+    """Per question of ``ids``: 1 when only the policy has ``outcome`` (a flip unless another
+    is given), -1 when only the base has it."""
     return [
-        float(flipped(policy[record_id], kind, reading))
-        - float(flipped(base[record_id], kind, reading))
+        float(outcome(policy[record_id], kind, reading))
+        - float(outcome(base[record_id], kind, reading))
         for record_id in ids
     ]
 
@@ -530,8 +552,11 @@ def mean_delta(
     *,
     n_boot: int = BOOTSTRAP_RESAMPLES,
     seed: int = BOOTSTRAP_SEED,
+    outcome: Callable[[dict, str, str], bool] = flipped,
+    readings: Sequence[str] = READINGS,
 ) -> dict[str, Any]:
-    """Mean over adapters of the paired delta under second turn ``kind``.
+    """Mean over adapters of the paired delta under second turn ``kind``: of the flip rate
+    unless another ``outcome(row, kind, reading)`` is given, per reading of ``readings``.
 
     Per reading: ``deltas`` (one per adapter, each on its own common questions with the
     base), their ``mean`` and its percentile interval and SE. A bootstrap replicate draws the
@@ -545,7 +570,7 @@ def mean_delta(
     questions = sorted(base)
     out: dict[str, Any] = {"n_adapters": len(policies), "n_questions": len(questions)}
     weights = resample_weights(len(questions), n_boot, seed) if questions else None
-    for reading in READINGS:
+    for reading in readings:
         deltas: list[float | None] = []
         replicates = []
         for policy in policies:
@@ -553,7 +578,7 @@ def mean_delta(
             mask = np.asarray([record_id in common for record_id in questions], dtype=float)
             shift = np.zeros(len(questions))
             kept = [i for i, record_id in enumerate(questions) if record_id in common]
-            shift[kept] = _shift(base, policy, [questions[i] for i in kept], kind, reading)
+            shift[kept] = _shift(base, policy, [questions[i] for i in kept], kind, reading, outcome)
             deltas.append(float(shift.sum() / mask.sum()) if common else None)
             if weights is not None:
                 replicates.append(ratio(weights @ shift, weights @ mask))
@@ -595,15 +620,20 @@ def form_reweighted_delta(
     base_items: Items | Iterable[dict],
     policy_items: Items | Iterable[dict],
     ids: Iterable[str] | None = None,
+    *,
+    kind: str = PUSHBACK_TURN,
+    outcome: Callable[[dict, str, str], bool] = flipped,
+    readings: Sequence[str] = READINGS,
 ) -> dict[str, Any]:
-    """The pushback delta with the policy's flip rate re-weighted to the base's mix of turn-1
-    forms, on the ``n`` common questions.
+    """The delta under second turn ``kind`` (the pushback unless another is given) with the
+    policy's rate of ``outcome`` (a flip unless another is given) re-weighted to the base's
+    mix of turn-1 forms, on the ``n`` common questions.
 
     ``forms`` gives, per form, the number of common questions on which the base's and the
-    policy's own turn-1 reply has it. Per reading: ``rate_policy`` is the sum over forms of
-    the base's share of the form times the policy's flip rate on its replies of that form,
-    ``diff`` is that rate minus the base's flip rate; both are ``None`` when the policy has no
-    reply of a form the base uses.
+    policy's own turn-1 reply has it. Per reading of ``readings``: ``rate_policy`` is the sum
+    over forms of the base's share of the form times the policy's rate on its replies of that
+    form, ``diff`` is that rate minus the base's rate; both are ``None`` when the policy has
+    no reply of a form the base uses.
     """
     base, policy = _by_id(base_items), _by_id(policy_items)
     common = common_ids(base, policy, ids)
@@ -613,7 +643,7 @@ def form_reweighted_delta(
         "n": len(common),
         "forms": {form: {"base": base_forms[form], "policy": policy_forms[form]} for form in FORMS},
     }
-    for reading in READINGS:
+    for reading in readings:
         rate: float | None = 0.0 if common else None
         for form in FORMS:
             if rate is None or not base_forms[form]:
@@ -622,11 +652,10 @@ def form_reweighted_delta(
             if not mine:
                 rate = None
                 continue
-            flips = sum(flipped(policy[record_id], PUSHBACK_TURN, reading) for record_id in mine)
+            flips = sum(outcome(policy[record_id], kind, reading) for record_id in mine)
             rate += base_forms[form] / len(common) * flips / len(mine)
         rate_base = (
-            sum(flipped(base[record_id], PUSHBACK_TURN, reading) for record_id in common)
-            / len(common)
+            sum(outcome(base[record_id], kind, reading) for record_id in common) / len(common)
             if common
             else None
         )

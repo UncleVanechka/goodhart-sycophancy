@@ -603,16 +603,16 @@ def logged_value(run: Run, key: str, step: int) -> float | None:
     return None
 
 
-def endpoint_step(steps: Iterable[float]) -> int | None:
-    """Step of a run's endpoint adapter: ``FINAL_STEP`` once it was evaluated, else the last
+def endpoint_step(steps: Iterable[float], final_step: int = FINAL_STEP) -> int | None:
+    """Step of a run's endpoint adapter: ``final_step`` once it was evaluated, else the last
     multiple of ``CHECKPOINT_EVERY`` up to the last evaluated step; ``None`` before the first
     checkpoint."""
     logged = [int(step) for step in steps]
     if not logged:
         return None
-    if FINAL_STEP in logged:
-        return FINAL_STEP
-    return min(max(logged), FINAL_STEP) // CHECKPOINT_EVERY * CHECKPOINT_EVERY or None
+    if final_step in logged:
+        return final_step
+    return min(max(logged), final_step) // CHECKPOINT_EVERY * CHECKPOINT_EVERY or None
 
 
 def proxy_gain(run: Run, step: int = FINAL_STEP) -> float | None:
@@ -837,20 +837,21 @@ def load_floor_run(name: str, directory: str | Path) -> FloorRun:
     return out
 
 
-def find_run_dirs(paths: Iterable[str | Path]) -> dict[str, Path]:
-    """Directory of every floor run found under ``paths``: a directory named after a run is
-    that run, any other directory is searched for sub-directories named after runs. A run
-    found twice, a path without a run and the re-evaluation of a run are errors."""
+def find_run_dirs(paths: Iterable[str | Path], runs: Mapping[str, int] = RUNS) -> dict[str, Path]:
+    """Directory of every run of ``runs`` (the floor runs by default) found under ``paths``: a
+    directory named after a run is that run, any other directory is searched for
+    sub-directories named after runs. A run found twice, a path without a run and the
+    re-evaluation of a run are errors."""
     found: dict[str, Path] = {}
     for path in map(Path, paths):
         if not path.is_dir():
             raise FileNotFoundError(f"no run directory {path.name}")
-        if path.name in RUNS:
+        if path.name in runs:
             hits = {path.name: path}
         else:
-            hits = {name: path / name for name in RUNS if (path / name).is_dir()}
+            hits = {name: path / name for name in runs if (path / name).is_dir()}
         if not hits:
-            raise ValueError(f"{path.name} is not a floor run and holds none of {list(RUNS)}")
+            raise ValueError(f"{path.name} is not a floor run and holds none of {list(runs)}")
         for name, directory in hits.items():
             if name in found:
                 raise ValueError(
@@ -863,16 +864,16 @@ def find_run_dirs(paths: Iterable[str | Path]) -> dict[str, Path]:
     return found
 
 
-def other_run_dirs(paths: Iterable[str | Path]) -> list[str]:
+def other_run_dirs(paths: Iterable[str | Path], runs: Mapping[str, int] = RUNS) -> list[str]:
     """Names of the directories under ``paths`` that hold a curve or training completions
-    and are not named after a floor run: they are not read."""
+    and are not named after a run of ``runs`` (the floor runs by default): they are not read."""
     names = set()
     for path in map(Path, paths):
-        if not path.is_dir() or path.name in RUNS:
+        if not path.is_dir() or path.name in runs:
             continue
         for child in path.iterdir():
             logged = any((child / file).is_file() for file in ("curve.jsonl", "rollouts.jsonl"))
-            if child.is_dir() and child.name not in RUNS and logged:
+            if child.is_dir() and child.name not in runs and logged:
                 names.add(child.name)
     return sorted(names)
 
@@ -1217,9 +1218,9 @@ def _empty_row(name: str) -> dict[str, Any]:
     }
 
 
-def config_check(summary: dict, seed: int) -> dict[str, Any]:
+def config_check(summary: dict, seed: int, max_steps: int = FINAL_STEP) -> dict[str, Any]:
     """Whether the stored config of a run is the registered one: α = 0 with the floor, the
-    run's seed and ``FINAL_STEP`` steps. ``ok`` is ``None`` without a summary."""
+    run's seed and ``max_steps`` steps. ``ok`` is ``None`` without a summary."""
     if not summary:
         return {"condition": None, "seed": None, "max_steps": None, "ok": None}
     config = summary.get("config") or {}
@@ -1233,7 +1234,7 @@ def config_check(summary: dict, seed: int) -> dict[str, Any]:
         out["condition"] == FLOOR_CONDITION
         and floor.get("value") == FLOOR_VALUE
         and out["seed"] == seed
-        and out["max_steps"] == FINAL_STEP
+        and out["max_steps"] == max_steps
     )
     return out
 
@@ -1251,14 +1252,16 @@ def _compared_step(summary: dict | None) -> int | None:
     return None if step is None else int(step)
 
 
-def run_state(name: str, floor_run: FloorRun, inputs: Inputs) -> dict[str, Any]:
+def run_state(
+    name: str, floor_run: FloorRun, inputs: Inputs, final_step: int = FINAL_STEP
+) -> dict[str, Any]:
     """Whether a run finished, the step of its endpoint adapter and the notes that say what
     this rests on.
 
-    A run is complete with a logged evaluation of ``FINAL_STEP``. Three things show that
+    A run is complete with a logged evaluation of ``final_step``. Three things show that
     training ended without one: the run's ``summary.json``, the directory of its final
     adapter, a re-evaluation of the final adapter compared with the logged step
-    ``FINAL_STEP``. With ``curve.jsonl`` read whole and none of them, the run is cut short
+    ``final_step``. With ``curve.jsonl`` read whole and none of them, the run is cut short
     and its last checkpoint is ``endpoint_step`` of the evaluated steps; with one of them
     the inputs disagree and the state of the run is not known. With the curve missing or
     cut, the run is complete when one of the three is there; otherwise its last checkpoint
@@ -1267,16 +1270,16 @@ def run_state(name: str, floor_run: FloorRun, inputs: Inputs) -> dict[str, Any]:
     is not known.
     """
     steps = [] if floor_run.run is None else [int(step) for step in floor_run.run.steps]
-    if FINAL_STEP in steps:
-        return {"status": COMPLETE, "step": FINAL_STEP, "notes": []}
+    if final_step in steps:
+        return {"status": COMPLETE, "step": final_step, "notes": []}
     ended = []
     if SUMMARY_FILE in floor_run.files:
         ended.append(f"{SUMMARY_FILE} was written")
     if floor_run.final_saved:
         ended.append("the final adapter was saved")
-    if _compared_step(inputs.summaries.get(name)) == FINAL_STEP:
-        ended.append(f"the re-evaluation compares the logged step {FINAL_STEP}")
-    step = endpoint_step(steps)
+    if _compared_step(inputs.summaries.get(name)) == final_step:
+        ended.append(f"the re-evaluation compares the logged step {final_step}")
+    step = endpoint_step(steps, final_step)
     if floor_run.curve_intact and ended:
         note = (
             f"curve.jsonl stops at step {max(steps)} although {' and '.join(ended)}: the "
@@ -1288,10 +1291,10 @@ def run_state(name: str, floor_run: FloorRun, inputs: Inputs) -> dict[str, Any]:
         return {"status": CUT_SHORT, "step": step, "notes": notes}
     if ended:
         note = (
-            f"curve.jsonl does not show step {FINAL_STEP}; the run is read as complete: "
+            f"curve.jsonl does not show step {final_step}; the run is read as complete: "
             + " and ".join(ended)
         )
-        return {"status": COMPLETE, "step": FINAL_STEP, "notes": [note]}
+        return {"status": COMPLETE, "step": final_step, "notes": [note]}
     prefix = f"{name}-ckpt"
     known = [step or 0, *floor_run.checkpoints]
     known += [
@@ -1299,7 +1302,7 @@ def run_state(name: str, floor_run: FloorRun, inputs: Inputs) -> dict[str, Any]:
         for policy in {*inputs.policies, *inputs.problems}
         if policy.startswith(prefix) and policy[len(prefix) :].isdigit()
     ]
-    known = [value for value in known if 0 < value <= FINAL_STEP]
+    known = [value for value in known if 0 < value <= final_step]
     if known:
         note = f"curve.jsonl is missing or cut: the last checkpoint known is step {max(known)}"
         return {"status": CUT_SHORT, "step": max(known), "notes": [note]}
@@ -1458,20 +1461,57 @@ def analyze_run(
                 f"the checkpoint of step {endpoint['step']} is not read: no label"
             )
         return row
+    row.update(
+        read_endpoint(rows, covered, inputs, endpoint, complete=complete, floor_run=floor_run)
+    )
+    return row
+
+
+def read_endpoint(
+    rows: Items,
+    covered: frozenset[str],
+    inputs: Inputs,
+    endpoint: dict[str, Any],
+    *,
+    complete: bool = True,
+    floor_run: FloorRun | None = None,
+) -> dict[str, Any]:
+    """The reading of a run's endpoint replies ``rows``, which cover the record ids
+    ``covered``: the measures and the stratum test under both readings, the unparsed gate,
+    the label, padding and a reading sample, as the keys of the run's row they set.
+    ``endpoint`` (the row's ``endpoint`` block) receives the number of replies, the base rows
+    in use and the notes.
+
+    Without base rows in ``inputs`` R is tested against the validation replies ``floor_run``
+    logged at step 0; without either the label is given only when it does not depend on R
+    (``label_without_stratum``) and is ``not_run`` otherwise.
+    """
+    out: dict[str, Any] = {
+        "stratum": None,
+        "stratum_unparsed_as_agreeing": None,
+        "stratum_run_unparsed_as_agreeing": None,
+        "label_unparsed_as_agreeing": None,
+    }
     measures = endpoint_measures(rows.values())
     upper = endpoint_measures(rows.values(), unparsed_as_agreeing=True)
     padding = padded_share(rows.values(), inputs.records)
     endpoint.update(n=len(rows), n_expected=len(covered))
-    row.update(
+    out.update(
         measures=measures,
         measures_unparsed_as_agreeing=upper,
         padding=padding,
         reading_sample=reading_sample(rows.values()),
     )
-    row["unparsed_gate"].update(U=measures["U"], over=measures["U"] > UNPARSED_GATE + EPS)
+    out["unparsed_gate"] = {
+        "U": measures["U"],
+        "over": measures["U"] > UNPARSED_GATE + EPS,
+        "label_changes": None,
+        "label_changes_measures_only": None,
+        "label_changes_run_unparsed_only": None,
+    }
 
     base, base_source = inputs.base, inputs.base_source
-    if base is None:
+    if base is None and floor_run is not None:
         base, base_source = _logged(floor_run, inputs, 0), LOGGED_STEP0
     ids = [rid for rid in inputs.stratum if rid in covered]
     if base is None or any(rid not in base for rid in ids):
@@ -1501,23 +1541,23 @@ def analyze_run(
         )
         label = run_label(measures, upper, test, upper_stratum=both, complete=complete)
         first, second = reading_label(measures, test), reading_label(upper, both)
-        row.update(
+        out.update(
             stratum={**test, "rises": rises(test)},
             stratum_unparsed_as_agreeing={**both, "rises": rises(both)},
             stratum_run_unparsed_as_agreeing={**run_only, "rises": rises(run_only)},
             label_unparsed_as_agreeing=second,
         )
-        row["unparsed_gate"].update(
+        out["unparsed_gate"].update(
             label_changes=second != first,
             label_changes_measures_only=reading_label(upper, test) != first,
             label_changes_run_unparsed_only=reading_label(upper, run_only) != first,
         )
-    row.update(
+    out.update(
         label=label,
         valid=label in VALID_LABELS,
         padded=padding["over"] if label == ARGUED_COLLAPSE else None,
     )
-    return row
+    return out
 
 
 # ----------------------------------------------------------------------------- arm and predictions

@@ -7,9 +7,9 @@ SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
 
 .PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
-	grpo-persona-mix-600 grpo-floor grpo-floor-600 reeval reeval-600 reeval-floor \
-	reeval-floor-600 are-you-sure prereg-v2 \
-	prereg-floor prereg-are-you-sure sample-rate rescore ci plots clean
+	grpo-persona-mix-600 grpo-floor grpo-floor-600 reeval reeval-600 reeval-floor reeval-floor-600 \
+	are-you-sure are-you-sure-named prereg-v2 prereg-floor prereg-are-you-sure prereg-named-letter \
+	prereg-floor-600 sample-rate rescore ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -62,7 +62,8 @@ grpo-persona-mix-600:
 grpo-floor:
 	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo_floor.yaml $(SEED_ARG)
 
-# The reply-floor arm to 600 steps (docs/PREREG.md v4, part F): make grpo-floor-600, then SEED=43, 44
+# The reply-floor arm to 600 steps (docs/PREREG.md v4, part F):
+# make grpo-floor-600, then SEED=43, 44
 grpo-floor-600:
 	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo_floor_600.yaml $(SEED_ARG)
 
@@ -86,6 +87,11 @@ reeval-floor-600:
 are-you-sure:
 	$(PY) -m goodhart.experiments.are_you_sure --config $(CFG)/are_you_sure.yaml
 
+# The same stage with one second turn that names the question's wrong letter (docs/PREREG.md v4,
+# part L; GPU, no judge) -> results/are_you_sure_named/
+are-you-sure-named:
+	$(PY) -m goodhart.experiments.are_you_sure --config $(CFG)/are_you_sure_named.yaml
+
 # Registered reading of the three 600-step persona-mixture runs of docs/PREREG.md v2 (CPU):
 # endpoint and class of every checkpoint, the rule and the predictions ->
 # results/analysis/prereg_v2.{json,md}. It reads the stored runs (results/grpo_600) and the
@@ -106,6 +112,26 @@ prereg-floor:
 
 prereg-are-you-sure:
 	$(PY) -m goodhart.analysis.are_you_sure --stage-dir results/are_you_sure $(ARGS)
+
+# Registered reading of part L of docs/PREREG.md v4 (CPU): labels, the reading and L1-L4 ->
+# results/analysis/prereg_named_letter.{json,md}, from the rows of make are-you-sure-named, of
+# make are-you-sure (the controls) and of the paired re-evaluation (S1; a policy in both
+# directories is read from the last); the dataset of make data is the reference of the pairing
+# gate. ARGS adds arguments or replaces the directories, e.g.
+# make prereg-named-letter ARGS="--base-samples <file>"
+prereg-named-letter:
+	$(PY) -m goodhart.analysis.named_letter --named results/are_you_sure_named \
+		--controls results/are_you_sure --reeval results/reeval_600 results/reeval \
+		--data data/prompts.jsonl $(ARGS)
+
+# Registered reading of part F of docs/PREREG.md v4 (CPU): the floor arm to 600 steps ->
+# results/analysis/prereg_floor_600.{json,md}, from the runs of make grpo-floor-600, the rows of
+# make reeval-floor-600 and the frozen base rows of v3.1. The committed v3 runs hold no rollouts
+# or eval_items, so for the prompt share and the step-0 reply comparison pass the full v3 run
+# directories, e.g. make prereg-floor-600 ARGS="--v3-runs <dir> <dir> <dir>"
+prereg-floor-600:
+	$(PY) -m goodhart.analysis.floor_600 --runs results/grpo_floor_600 --reeval results/reeval_floor_600 \
+		--base-items results/reeval/base/items.jsonl --v3-runs results/grpo_floor $(ARGS)
 
 sample-rate:
 	$(PY) -m goodhart.experiments.sample_rate --config $(CFG)/sample_rate.yaml

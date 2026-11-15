@@ -4,8 +4,8 @@ v1.1), which are not committed.
 The rows live only where the runner outputs were fetched to, under :data:`FETCHED` (the
 ``RUNNER_RESULTS`` default of the analyses). They are found by their content, never by the name
 of the job that wrote them: the base policy's rows by their sha256, the checkpoints of the saved
-runs by policy name. Each helper returns ``None`` when the rows are not on disk, and the tests
-that need them skip.
+runs and the floor runs of v3 with their re-evaluation by run and policy name. Each helper
+returns ``None`` when the rows are not on disk, and the tests that need them skip.
 """
 
 from __future__ import annotations
@@ -54,3 +54,64 @@ def paired_reeval_dirs() -> tuple[Path, ...] | None:
                     return None
                 dirs[hits[0].parents[1]] = None
     return tuple(dirs)
+
+
+@lru_cache(maxsize=1)
+def floor_run_dirs() -> tuple[Path, ...] | None:
+    """The directories of the three 300-step floor runs (``floor_arm.RUNS``) among the fetched
+    outputs, each found once by its name with its logged validation replies. ``None`` unless
+    all three are on disk."""
+    from goodhart.analysis import floor_arm
+
+    dirs = []
+    for run in floor_arm.RUNS:
+        hits = sorted(FETCHED.glob(f"*/results/grpo_floor/{run}/eval_items.jsonl"))
+        if len(hits) != 1:
+            return None
+        dirs.append(hits[0].parent)
+    return tuple(dirs)
+
+
+@lru_cache(maxsize=1)
+def floor_reeval_dir() -> Path | None:
+    """The re-evaluation directory of the floor runs: the one that holds the rows of all three
+    runs' final adapters. ``None`` when it is not on disk."""
+    from goodhart.analysis import floor_arm
+
+    found = None
+    for path in sorted(FETCHED.glob("*/results/reeval_floor")):
+        if all((path / run / "items.jsonl").is_file() for run in floor_arm.RUNS):
+            if found is not None:
+                return None
+            found = path
+    return found
+
+
+# sha256 of the base policy's items.jsonl in part B of v3 (the two-turn evaluation)
+PART_B_BASE_SHA256 = "14ebb3f96f3d4fde18447ff661582ca3dd073ded4a0a9111b6e7389e71c56c6c"
+# sha256 of the base policy's 8 samples per no-opinion validation and test question
+BASE_NONE_SAMPLES_SHA256 = "032c01aac01a57ef056eb41863d1dddfc03e97f24e0e268d6d8c2b05a6fb4f82"
+
+
+def _by_sha256(pattern: str, sha256: str) -> Path | None:
+    for path in sorted(FETCHED.glob(pattern)):
+        if hashlib.sha256(path.read_bytes()).hexdigest() == sha256:
+            return path
+    return None
+
+
+@lru_cache(maxsize=1)
+def part_b_dir() -> Path | None:
+    """The output directory of part B of v3 (``<policy>/items.jsonl`` of the two-turn
+    evaluation), found by its base policy's rows, or ``None``."""
+    path = _by_sha256("*/results/are_you_sure/base/items.jsonl", PART_B_BASE_SHA256)
+    return None if path is None else path.parents[1]
+
+
+@lru_cache(maxsize=1)
+def base_none_samples() -> Path | None:
+    """The base policy's samples on the no-opinion validation and test questions, or
+    ``None``."""
+    return _by_sha256(
+        "*/results/sample_rate/base-none-val-test/samples.jsonl", BASE_NONE_SAMPLES_SHA256
+    )

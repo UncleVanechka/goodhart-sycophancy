@@ -463,3 +463,77 @@ def test_make_floor_targets():
         *"python -m goodhart.experiments.reeval --config".split(),
         "configs/reeval_floor.yaml",
     ]
+
+
+# ----------------------------------------------------------------------------- named letter
+
+NAMED_CONFIG = "are_you_sure_named.yaml"
+# the optional policies of PREREG v4 part L: the mixture checkpoints at step 600 of these seeds
+NAMED_OPTIONAL_SEEDS = (44, 46)
+
+
+def test_named_letter_config_is_the_are_you_sure_config_with_one_named_turn():
+    from goodhart.experiments.are_you_sure import ordered_policies, second_kinds
+
+    named = load_config(CONFIGS / NAMED_CONFIG)
+    plain = load_config(CONFIGS / "are_you_sure.yaml")
+    changed = {key for key in set(named) | set(plain) if named.get(key) != plain.get(key)}
+    assert changed == {"second_turns", "optional", "reference", "out"}
+    assert second_kinds(named) == ("named",) and second_kinds(plain) == ("pushback", "neutral")
+    assert named["out"] == "results/are_you_sure_named"
+    # the same eleven policies in the same (registered) order, then the two checkpoints
+    assert list(named["policies"]) == list(plain["policies"])
+    train_cfg = load_config(CONFIGS / LONG_CONFIG)
+    step = train_cfg["grpo"]["max_steps"]
+    assert step == 600 and step % train_cfg["grpo"]["save_steps"] == 0
+    runs = {seed: run for seed in LONG_SEEDS for run, _ in expand_sweep(with_seed(train_cfg, seed))}
+    optional = {f"{runs[seed]}-ckpt{step}": runs[seed] for seed in NAMED_OPTIONAL_SEEDS}
+    assert named["optional"] == {
+        name: f"adapters/{run}/checkpoint-{step}" for name, run in optional.items()
+    }
+    policies = ordered_policies(named)
+    assert list(policies) == [*plain["policies"], *optional]
+    assert [spec["optional"] for spec in policies.values()] == [False] * 11 + [True] * 2
+    # the turn-1 reference of every policy is its paired re-evaluation, the checkpoints' under
+    # the names reeval_600.yaml gives them
+    reference = named["reference"]
+    assert reference["min_same"] == plain["reference"]["min_same"] == 594
+    assert reference["items"] == {
+        **plain["reference"]["items"],
+        **{name: f"reeval/{name}/items.jsonl" for name in optional},
+    }
+    assert list(reference["items"]) == list(policies)
+    assert set(optional) <= set(load_config(CONFIGS / LONG_REEVAL_CONFIG)["policies"])
+
+
+@pytest.mark.skipif(shutil.which("make") is None, reason="make is not installed")
+def test_make_targets_of_the_named_letter_turn_and_its_reading():
+    def dry_run(*args: str) -> str:
+        command = ["make", "-n", *args, "PY=python"]
+        return subprocess.run(command, capture_output=True, text=True, check=True).stdout
+
+    assert dry_run("are-you-sure-named").split() == [
+        *"python -m goodhart.experiments.are_you_sure --config".split(),
+        f"configs/{NAMED_CONFIG}",
+    ]
+    call = dry_run("prereg-named-letter").replace("\\\n", " ").split()
+    named = load_config(CONFIGS / NAMED_CONFIG)["out"]
+    controls = load_config(CONFIGS / "are_you_sure.yaml")["out"]
+    # the paired re-evaluation comes last: a policy in both directories is read from it
+    reeval = [
+        load_config(CONFIGS / LONG_REEVAL_CONFIG)["out"],
+        load_config(CONFIGS / "reeval.yaml")["out"],
+    ]
+    assert call == [
+        *"python -m goodhart.analysis.named_letter --named".split(),
+        named,
+        "--controls",
+        controls,
+        "--reeval",
+        *reeval,
+        # the pairing gate reads the dataset the stage built its named turns from
+        "--data",
+        load_config(CONFIGS / NAMED_CONFIG)["data"],
+    ]
+    replaced = dry_run("prereg-named-letter", "ARGS=--reeval one").replace("\\\n", " ").split()
+    assert replaced[-2:] == ["--reeval", "one"]

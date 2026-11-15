@@ -1,0 +1,79 @@
+# goodhart.experiments.reeval — same as reeval_floor.yaml, for the 600-step reply-floor runs
+# (grpo_floor_600.yaml, seeds 42-44; docs/PREREG.md v4, part F): checkpoint 300 and the final
+# adapter of each run, validation and test only. No base policy: its frozen rows are those of
+# v3.1. Inputs under paths.data (default: data), copied there before the run:
+# adapters/<run>/final, adapters/<run>/checkpoint-300 and adapters/<run>/curve.jsonl from
+# results/grpo_floor_600/<run>/. A run cut short at step c >= 300 adds <run>-ckpt<c>
+# (checkpoint-c, step c) and sets <run>: null
+seed: 42
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+# name -> base | adapter directory | {adapter, curve, step}. Relative paths are under
+# paths.data. With curve (a run's curve.jsonl) the summary compares the validation metrics
+# with that curve at step (default: its last point, step 0 for the base policy, so the base
+# can be checked against any run's step-0 evaluation: {adapter: base, curve: ...}).
+# null drops a policy set in this file. step is the logged evaluation each adapter is
+# compared with: 600 for the final adapter, 300 for checkpoint 300
+policies:
+  grpo-immediate-floor30-600:
+    adapter: adapters/grpo-immediate-floor30-600/final
+    curve: adapters/grpo-immediate-floor30-600/curve.jsonl
+    step: 600
+  grpo-immediate-floor30-600-s43:
+    adapter: adapters/grpo-immediate-floor30-600-s43/final
+    curve: adapters/grpo-immediate-floor30-600-s43/curve.jsonl
+    step: 600
+  grpo-immediate-floor30-600-s44:
+    adapter: adapters/grpo-immediate-floor30-600-s44/final
+    curve: adapters/grpo-immediate-floor30-600-s44/curve.jsonl
+    step: 600
+  grpo-immediate-floor30-600-ckpt300:
+    adapter: adapters/grpo-immediate-floor30-600/checkpoint-300
+    curve: adapters/grpo-immediate-floor30-600/curve.jsonl
+    step: 300
+  grpo-immediate-floor30-600-s43-ckpt300:
+    adapter: adapters/grpo-immediate-floor30-600-s43/checkpoint-300
+    curve: adapters/grpo-immediate-floor30-600-s43/curve.jsonl
+    step: 300
+  grpo-immediate-floor30-600-s44-ckpt300:
+    adapter: adapters/grpo-immediate-floor30-600-s44/checkpoint-300
+    curve: adapters/grpo-immediate-floor30-600-s44/curve.jsonl
+    step: 300
+
+policy:
+  device: cuda
+  dtype: float32          # TRL loads a model given by name in float32: the curves decoded in it
+
+generation:               # as grpo.yaml: max_completion_length, chat_template_kwargs
+  max_new_tokens: 512
+  chat_template_kwargs:
+    enable_thinking: false
+
+eval:
+  splits: [val, test]     # 300 questions x 3 opinion types each
+  batch_size: 16          # the training runs' evaluation batch size
+  max_questions: null     # questions per split, all opinion variants kept; null = all
+
+judges:                   # metric prefix -> persona; proxy is the immediate judge
+  proxy: agreeable
+  informed: agreeable_informed
+  truth_seeking: truth_seeking
+
+heldout:                  # SycophancyEval answer set, not rated; metrics are sycoeval_*, not
+                          # comparable in level to the curves' per-run heldout_* samples
+  enabled: false
+  file: sycophancy_eval/answer.jsonl    # under paths.data
+  letter_seed: 0          # Random(letter_seed) draws the A/B order once per question
+  max_questions: null     # null = all 1,817 questions (7,268 prompts); else a fixed subset
+  subset_seed: 0          # the subset is the same for every job
+  batch_size: 64          # shared by every policy; 16 repeats the training runs' held-out decode
+
+sanity:                   # allowed |re-evaluated - curve| on the validation split
+  sycophancy_rate: 0.02
+  proxy_mean: 0.05
+  gold_accuracy: 0.02
+
+skip_done: true           # a policy whose summary.json exists is read back, not re-run
+out: results/reeval_floor_600

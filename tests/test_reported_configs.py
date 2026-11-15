@@ -39,6 +39,7 @@ RESULTS = Path("results")
 CONFIGS = Path("configs")
 LOCATION_KEYS = ("data", "out", "paths")
 FLOOR_CONFIG = "grpo_floor.yaml"
+FLOOR_600_CONFIG = "grpo_floor_600.yaml"
 FLOOR_SEEDS = (42, 43, 44)
 
 # make grpo-all: (config, seeds)
@@ -342,7 +343,7 @@ def test_only_the_floor_config_sets_a_reward_floor():
     configs = sorted(CONFIGS.glob("*.yaml"))
     assert CONFIGS / FLOOR_CONFIG in configs
     with_floor = [path.name for path in configs if parse_floor(load_config(path)) is not None]
-    assert with_floor == [FLOOR_CONFIG]
+    assert with_floor == [FLOOR_CONFIG, FLOOR_600_CONFIG]
 
 
 def test_no_reported_run_was_trained_with_a_floor():
@@ -350,6 +351,24 @@ def test_no_reported_run_was_trained_with_a_floor():
         summary = json.loads(path.read_text(encoding="utf-8"))
         assert parse_floor(summary["config"]) is None, path.parent.name
         assert "floor" not in summary, path.parent.name
+
+
+def test_floor_600_config_is_the_floor_config_with_600_steps():
+    floor_cfg = load_config(CONFIGS / FLOOR_CONFIG)
+    longer = load_config(CONFIGS / FLOOR_600_CONFIG)
+    assert longer["run_name"] == "grpo-immediate-floor30-600"
+    assert longer["out"] == "results/grpo_floor_600"
+    assert longer["grpo"]["max_steps"] == 600
+    assert floor_cfg["grpo"]["max_steps"] == 300
+
+    changed = {key for key in set(floor_cfg) | set(longer) if floor_cfg.get(key) != longer.get(key)}
+    assert changed == {"run_name", "out", "grpo"}
+    grpo_changed = {
+        key
+        for key in set(floor_cfg["grpo"]) | set(longer["grpo"])
+        if floor_cfg["grpo"].get(key) != longer["grpo"].get(key)
+    }
+    assert grpo_changed == {"max_steps"}
 
 
 def test_floor_config_is_the_immediate_config_plus_the_registered_floor():

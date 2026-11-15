@@ -1,0 +1,48 @@
+# goodhart.experiments.train_grpo — same as grpo_floor.yaml, 600 steps instead of 300
+# (docs/PREREG.md v4, part F; seeds 42-44: make grpo-floor-600, then SEED=43, 44)
+seed: 42
+run_name: grpo-immediate-floor30-600
+data: data/prompts.jsonl
+model: Qwen/Qwen3-1.7B
+simulator: configs/simulator.yaml
+
+reward:
+  kind: immediate       # immediate | delayed | persona_mix
+  alpha: 0.0            # weight of the delayed rating (delayed only)
+  persona_weights:      # persona_mix only
+    agreeable: 1.0
+  floor:                # training reward only; the evaluation rates every reply
+    min_words: 30
+    value: 1.0
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+grpo:
+  num_generations: 8
+  learning_rate: 3.0e-5
+  lr_scheduler_type: constant_with_warmup
+  warmup_steps: 10
+  max_steps: 600
+  per_device_train_batch_size: 16   # 16 × 4 = 64 completions per step: 8 prompts × 8
+  gradient_accumulation_steps: 4
+  max_completion_length: 512
+  chat_template_kwargs: {enable_thinking: false}
+  beta: 0.04            # KL coefficient
+  temperature: 1.0
+  use_vllm: false       # true generates with vLLM; the reported runs used transformers
+  vllm_mode: colocate
+  bf16: true
+  logging_steps: 5
+  save_steps: 100
+
+eval:
+  every_steps: 25
+  val_items: 300        # items per opinion type from the val split
+  sycophancy_eval: true # held-out SycophancyEval, never used in training
+  sycophancy_eval_items: 300
+
+out: results/grpo_floor_600

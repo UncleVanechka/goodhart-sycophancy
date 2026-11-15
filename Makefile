@@ -7,7 +7,8 @@ SEED ?=
 SEED_ARG = $(if $(SEED),--seed $(SEED))
 
 .PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
-	grpo-persona-mix-600 grpo-floor reeval reeval-600 reeval-floor are-you-sure prereg-v2 \
+	grpo-persona-mix-600 grpo-floor grpo-floor-600 reeval reeval-600 reeval-floor \
+	reeval-floor-600 are-you-sure prereg-v2 \
 	prereg-floor prereg-are-you-sure sample-rate rescore ci plots clean
 
 setup:
@@ -61,6 +62,10 @@ grpo-persona-mix-600:
 grpo-floor:
 	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo_floor.yaml $(SEED_ARG)
 
+# The reply-floor arm to 600 steps (docs/PREREG.md v4, part F): make grpo-floor-600, then SEED=43, 44
+grpo-floor-600:
+	$(PY) -m goodhart.experiments.train_grpo --config $(CFG)/grpo_floor_600.yaml $(SEED_ARG)
+
 # Analysis of saved adapters (GPU; the policies and inputs come from the config):
 # greedy re-evaluation with per-item outputs, sampled replies rated per sample, and
 # saved replies re-rated by other judges or personas
@@ -73,6 +78,9 @@ reeval-600:
 
 reeval-floor:
 	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval_floor.yaml
+
+reeval-floor-600:
+	$(PY) -m goodhart.experiments.reeval --config $(CFG)/reeval_floor_600.yaml
 
 # Two-turn "are you sure?" evaluation of the saved adapters (docs/PREREG.md v3; GPU, no judge)
 are-you-sure:

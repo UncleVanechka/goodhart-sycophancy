@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from fetched_outputs import FETCHED
 from goodhart.analysis.prereg_v3 import (
     FLOOR_MIN_WORDS,
     FLOOR_VALUE,
@@ -53,8 +54,11 @@ LONG_STAGE = "grpo_600"
 LONG_CHECKPOINTS = (100, 200, 300, 400, 500, 600)
 LONG_REEVAL_CONFIG = "reeval_600.yaml"
 RUN_FILES = ("curve.jsonl", "summary.json", "train_log.jsonl")
-# the field that names the runner job in the summaries stored under results/grpo
+# the field that names the runner job in a summary as the runner writes it; no stored
+# summary keeps it
 JOB_FIELD = "runner_job_id"
+# every stage directory that stores the logged outputs of GRPO runs
+GRPO_STAGES = ("grpo", "grpo_first_pass", "grpo_600", "grpo_floor", "grpo_smoke")
 
 
 def _strip(cfg: dict, extra: tuple[str, ...] = ()) -> dict:
@@ -182,19 +186,23 @@ def _keys(obj, prefix: str = "") -> set[str]:
     }
 
 
-def test_stored_600_step_runs_name_no_job():
+def test_stored_runs_name_no_job():
     """The stored runs are the logged outputs as the trainer wrote them: no file names the
     runner job that produced it or the directory it was fetched to."""
     for name in _long_runs():
-        for file in RUN_FILES:
-            text = (RESULTS / LONG_STAGE / name / file).read_text(encoding="utf-8")
-            for token in ("manual__", JOB_FIELD, "results/fetched"):
-                assert token not in text, (name, file, token)
+        assert all((RESULTS / LONG_STAGE / name / file).is_file() for file in RUN_FILES), name
+    for stage in GRPO_STAGES:
+        paths = [path for file in RUN_FILES for path in sorted((RESULTS / stage).glob(f"*/{file}"))]
+        assert paths, stage
+        for path in paths:
+            text = path.read_text(encoding="utf-8")
+            for token in ("manual__", JOB_FIELD, FETCHED.as_posix()):
+                assert token not in text, (stage, path.parent.name, path.name, token)
 
 
 def test_stored_600_step_runs_hold_the_files_and_fields_of_the_reported_runs():
     """Logged outputs only, stored as under results/grpo: the same three files with the same
-    fields apart from the name of the runner job, and no checkpoint or adapter."""
+    fields, and no checkpoint or adapter."""
     reference = RESULTS / "grpo" / "grpo-persona-mix-s43"
     ref_summary = json.loads((reference / "summary.json").read_text(encoding="utf-8"))
     ref_curve = read_curve(reference / "curve.jsonl")
@@ -204,7 +212,7 @@ def test_stored_600_step_runs_hold_the_files_and_fields_of_the_reported_runs():
         run_dir = RESULTS / LONG_STAGE / name
         assert sorted(path.name for path in run_dir.iterdir()) == list(RUN_FILES), name
         summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
-        assert list(summary) == [key for key in ref_summary if key != JOB_FIELD], name
+        assert list(summary) == list(ref_summary), name
         assert _keys(summary["config"]) == _keys(ref_summary["config"]), name
         assert set(summary["final"]) == set(ref_summary["final"]), name
 
@@ -220,7 +228,7 @@ def test_stored_600_step_runs_hold_the_files_and_fields_of_the_reported_runs():
 
 def _fetched(name: str) -> Path | None:
     """The fetched output directory of a run (job outputs are not committed)."""
-    hits = sorted((RESULTS / "fetched").glob(f"*/results/*/{name}/curve.jsonl"))
+    hits = sorted(FETCHED.glob(f"*/results/*/{name}/curve.jsonl"))
     return hits[0].parent if len(hits) == 1 else None
 
 
@@ -268,7 +276,7 @@ def test_600_step_reeval_config_is_the_reeval_config_for_the_checkpoints():
 
 def _fetched_reeval(policy: str) -> Path | None:
     """The fetched re-evaluation summary of a policy (job outputs are not committed)."""
-    hits = sorted((RESULTS / "fetched").glob(f"*/results/reeval/{policy}/summary.json"))
+    hits = sorted(FETCHED.glob(f"*/results/reeval/{policy}/summary.json"))
     return hits[0] if len(hits) == 1 else None
 
 

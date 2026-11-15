@@ -21,6 +21,7 @@ from typing import Any
 
 from goodhart.analysis import breakeven, dynamics, frontier, opinion_proxy
 from goodhart.analysis.common import (
+    RUNNER_RESULTS,
     BonSamples,
     condition_label,
     find_samples_file,
@@ -234,7 +235,7 @@ def main(argv: list[str] | None = None) -> Path:
     parser.add_argument("--results", default="results")
     parser.add_argument(
         "--runner-results",
-        default="results/fetched",
+        default=RUNNER_RESULTS,
         help="directory with fetched runner outputs (per-item files under <run>/results/)",
     )
     parser.add_argument("--data", default="data/prompts.jsonl")

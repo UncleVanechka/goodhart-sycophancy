@@ -2,7 +2,7 @@
 
 ::
 
-    python -m goodhart.analysis.prereg_judges --runner-results results/fetched --out results/analysis
+    python -m goodhart.analysis.prereg_judges --out results/analysis
 
 Inputs, found under ``<runner-results>/*/results/`` by file name (the newest copy wins)
 ------------------------------------------------------------------------------------------
@@ -79,6 +79,7 @@ import numpy as np
 
 from goodhart.analysis import breakeven
 from goodhart.analysis.common import (
+    RUNNER_RESULTS,
     TIE_TOL,
     BonSamples,
     jsonable,
@@ -91,7 +92,6 @@ from goodhart.analysis.common import (
 from goodhart.analysis.paired import paired_bootstrap
 from goodhart.io import read_jsonl, write_json
 
-RUNNER_RESULTS = "results/fetched"
 OUT_DIR = "results/analysis"
 OUT_NAME = "prereg_m4.json"
 

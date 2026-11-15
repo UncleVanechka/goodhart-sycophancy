@@ -649,6 +649,5 @@
     "heldout_sycophancy_rate@wrong": 0.610738255033557
   },
   "curve_file": "/tmp/goodhart/results/mitigation/grpo-delayed-a0.6/curve.jsonl",
-  "runner_job_id": "job-03",
   "note": "In this run the evaluation rated greedy outputs with the training reward ((1 - alpha) * immediate + alpha * informed), so the recorded means are the training reward and are stored as reward_mean; the immediate-judge proxy_mean was not recorded"
 }

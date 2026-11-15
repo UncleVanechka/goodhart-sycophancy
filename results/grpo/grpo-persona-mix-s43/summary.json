@@ -870,6 +870,5 @@
     "heldout_reward_mean@correct": 7.586206896551724,
     "heldout_reward_mean@wrong": 6.404109589041096
   },
-  "curve_file": "/tmp/goodhart/results/mitigation/grpo-persona-mix-s43/curve.jsonl",
-  "runner_job_id": "job-13"
+  "curve_file": "/tmp/goodhart/results/mitigation/grpo-persona-mix-s43/curve.jsonl"
 }

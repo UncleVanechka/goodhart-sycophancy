@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from fetched_outputs import FETCHED, paired_base_items
 from goodhart.analysis import dynamics, prereg_eval, prereg_v3
 from goodhart.analysis import prereg_v2 as v2
 from goodhart.config import load_config
@@ -47,10 +48,10 @@ REGISTERED = {
 OUT_FILE = Path(v2.OUT_FILE)
 REPORT_FILE = OUT_FILE.with_suffix(".md")
 STORED_RUNS = Path(v2.RUNS_DIR)
-# fetched job outputs are not committed: the base policy's rows of the paired re-evaluation
-# and the directories that hold the re-evaluated checkpoints of the new runs
-RUNNER_DIR = Path(prereg_eval.RUNNER_DIR)
-BASE_ITEMS = RUNNER_DIR / prereg_eval.REEVAL_JOBS[0] / "results/reeval/base/items.jsonl"
+# fetched runner outputs are not committed: the base policy's rows of the paired
+# re-evaluation (``None`` when they are not on disk) and the directories that hold the
+# re-evaluated checkpoints of the new runs
+BASE_ITEMS = paired_base_items()
 CHECKPOINT_POLICIES = [v2.policy_name(run, step) for run in v2.RUNS for step in v2.CHECKPOINT_STEPS]
 # the ends of replies the parser leaves without a letter: a boxed answer, in the forms the
 # re-evaluated replies have. In the toy rows the user says B, so the third one agrees
@@ -1548,7 +1549,7 @@ def test_outputs_are_deterministic_and_name_no_path(arm, tmp_path):
     assert first.read_bytes() == second.read_bytes()
     assert first.with_suffix(".md").read_bytes() == second.with_suffix(".md").read_bytes()
     # the same inputs under other directories give the same bytes: no path is written
-    moved = tmp_path / "elsewhere" / "job-fixture"
+    moved = tmp_path / "elsewhere" / "moved-run"
     for name in ("runs", "reeval", "results"):
         shutil.copytree(getattr(arm, name), moved / name)
     copy = SimpleNamespace(
@@ -1563,7 +1564,7 @@ def test_outputs_are_deterministic_and_name_no_path(arm, tmp_path):
     assert first.with_suffix(".md").read_bytes() == third.with_suffix(".md").read_bytes()
     for path in (first, first.with_suffix(".md")):
         text = path.read_text(encoding="utf-8")
-        for token in (str(tmp_path), tmp_path.name, "elsewhere", "job-", "reeval", "runs/"):
+        for token in (str(tmp_path), tmp_path.name, "elsewhere", "moved-run", "reeval", "runs/"):
             assert token not in text, (path.name, token)
 
 
@@ -1581,7 +1582,7 @@ def test_cli_needs_the_reevaluation_and_a_run(arm, tmp_path):
 def test_committed_outputs_name_no_path_and_no_job():
     for path in (OUT_FILE, REPORT_FILE):
         text = path.read_text(encoding="utf-8")
-        for token in ("manual__", "/tmp", "/Users", "/home", "results/fetched", "://"):
+        for token in ("manual__", "/tmp", "/Users", "/home", FETCHED.as_posix(), "://"):
             assert token not in text, (path.name, token)
     payload = read_json(OUT_FILE)
     assert payload["inputs"]["runs"] == list(v2.RUNS)
@@ -1643,11 +1644,11 @@ def _reeval_dirs():
     one of the paired re-evaluation of v1; ``None`` unless every checkpoint is on disk."""
     found = {}
     for name in CHECKPOINT_POLICIES:
-        hits = sorted(RUNNER_DIR.glob(f"*/results/reeval/{name}/items.jsonl"))
+        hits = sorted(FETCHED.glob(f"*/results/reeval/{name}/items.jsonl"))
         if len(hits) != 1:
             return None
         found[hits[0].parents[1]] = None
-    return [*found, BASE_ITEMS.parents[1]] if BASE_ITEMS.is_file() else None
+    return [*found, BASE_ITEMS.parents[1]] if BASE_ITEMS is not None else None
 
 
 @pytest.mark.skipif(_reeval_dirs() is None, reason="the re-evaluation items are not on disk")

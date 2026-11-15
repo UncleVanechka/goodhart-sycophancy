@@ -2,13 +2,15 @@
 
 import json
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from goodhart.analysis import prereg_eval as pe
+from goodhart.analysis.common import RUNNER_RESULTS
 from goodhart.analysis.paired import mcnemar_exact
-from goodhart.io import write_json, write_jsonl
+from goodhart.io import read_json, write_json, write_jsonl
 
 N_BOOT = 200
 ALL_RUNS = [run for runs in pe.RUNS.values() for run in runs]
@@ -710,52 +712,52 @@ def test_condition_effects_average_runs_and_contrast_conditions(toy_items):
 # ----------------------------------------------------------------------------- files and CLI
 
 
-def _write_jobs(tmp_path, toy_items):
-    runner = tmp_path / "fetched"
-    finals = runner / "job_finals" / "results" / "reeval"
-    checkpoints = runner / "job_checkpoints" / "results" / "reeval"
+def _write_inputs(tmp_path, toy_items):
+    """The re-evaluation in two directories (the base policy with the step-300 adapters, then
+    the checkpoints) and the base policy's samples in a third, as the stages write them."""
+    finals = tmp_path / "reeval-finals-dir"
+    checkpoints = tmp_path / "reeval-checkpoints-dir"
     for name, rows in toy_items.items():
         root = checkpoints if "-ckpt" in name else finals
         write_jsonl(root / name / "items.jsonl", rows.values())
         sanity = {"ok": True, "step": 300, "checks": {"sycophancy_rate": {"diff": 0.0}}}
         write_json(root / name / "summary.json", {} if name == "base" else {"sanity": sanity})
-    write_jsonl(
-        runner / "job_samples" / "results" / "sample_rate" / "base-none-val-test" / "samples.jsonl",
-        base_none_samples(),
-    )
-    return runner
+    samples = tmp_path / "samples-dir"
+    write_jsonl(samples / "base-none-val-test" / "samples.jsonl", base_none_samples())
+    return finals, checkpoints, samples
 
 
-def test_load_reeval_reads_every_job_and_rejects_duplicates(tmp_path, toy_items):
-    runner = _write_jobs(tmp_path, toy_items)
-    items, summaries, sources = pe.load_reeval(runner, ["job_finals", "job_checkpoints"])
+def test_load_reeval_reads_every_directory_and_rejects_duplicates(tmp_path, toy_items):
+    finals, checkpoints, samples = _write_inputs(tmp_path, toy_items)
+    items, summaries, sources = pe.load_reeval([finals, checkpoints])
     assert set(items) == set(toy_items)
-    assert sources["grpo-immediate-s43-ckpt100"] == "job_checkpoints"
-    assert sources["base"] == "job_finals"
+    assert sources["grpo-immediate-s43-ckpt100"] == 2
+    assert sources["base"] == 1
     assert pe.sanity_summary(summaries)["all_ok"]
     assert pe.sanity_summary(summaries)["n_checked"] == len(toy_items) - 1
     with pytest.raises(ValueError):
-        pe.load_reeval(runner, ["job_finals", "job_finals"])
+        pe.load_reeval([finals, finals])
     with pytest.raises(ValueError):
-        pe.load_reeval(runner, ["job_checkpoints"])
+        pe.load_reeval([checkpoints])
     with pytest.raises(FileNotFoundError):
-        pe.load_reeval(runner, ["job_missing"])
+        pe.load_reeval([tmp_path / "missing"])
     with pytest.raises(FileNotFoundError):
-        pe.load_base_none_samples(runner, "job_finals")
+        pe.load_base_none_samples(finals)
+    assert len(pe.load_base_none_samples(samples)) == len(base_none_samples())
 
 
 def test_cli_writes_the_payload_without_paths(tmp_path, toy_items, capsys):
-    runner = _write_jobs(tmp_path, toy_items)
+    finals, checkpoints, samples = _write_inputs(tmp_path, toy_items)
     out = tmp_path / "analysis" / "prereg_m2.json"
     payload = pe.main(
         [
-            "--runner-dir",
-            str(runner),
-            "--reeval-jobs",
-            "job_finals",
-            "job_checkpoints",
-            "--sample-rate-job",
-            "job_samples",
+            "--reeval",
+            str(finals),
+            str(checkpoints),
+            "--sample-rate",
+            str(samples),
+            "--reeval-label",
+            "toy re-evaluation",
             "--out",
             str(out),
             "--n-boot",
@@ -767,6 +769,8 @@ def test_cli_writes_the_payload_without_paths(tmp_path, toy_items, capsys):
     assert saved == payload
     assert str(tmp_path) not in text
     assert str(tmp_path.name) not in text
+    for directory in (finals, checkpoints, samples):
+        assert directory.name not in text
     assert '"_boot"' not in text
     verdicts = {key: entry["verdict"] for key, entry in saved["predictions"].items()}
     # prediction 1: +50 points with 10 discordant pairs is an exact p of 0.002, above 0.001
@@ -782,8 +786,10 @@ def test_cli_writes_the_payload_without_paths(tmp_path, toy_items, capsys):
         "14": "confirmed",
         "15": "confirmed",
     }
-    assert saved["inputs"]["reeval_jobs"] == ["job_finals", "job_checkpoints"]
-    assert saved["inputs"]["policies"]["grpo-persona-mix"] == "job_finals"
+    assert saved["inputs"]["reeval"] == "toy re-evaluation"
+    assert saved["inputs"]["sample_rate"] == pe.SAMPLE_RATE_LABEL
+    assert saved["inputs"]["policies"]["grpo-persona-mix"] == 1
+    assert saved["inputs"]["policies"]["grpo-immediate-s43-ckpt100"] == 2
     assert saved["sanity_gate"]["all_ok"]
     assert saved["base"]["sycophancy_val_test"] == pytest.approx(0.4)
     assert saved["knows_stratum"]["n_stratum"] == 18
@@ -808,8 +814,26 @@ def test_cli_writes_the_payload_without_paths(tmp_path, toy_items, capsys):
 
 
 def test_analyze_without_samples_leaves_prediction_5_untested(tmp_path, toy_items):
-    runner = _write_jobs(tmp_path, toy_items)
-    payload = pe.analyze(runner, ["job_finals", "job_checkpoints"], None, n_boot=50)
+    finals, checkpoints, _ = _write_inputs(tmp_path, toy_items)
+    payload = pe.analyze([finals, checkpoints], None, n_boot=50)
     assert payload["predictions"]["5"]["verdict"] == "not testable"
     assert payload["knows_stratum"] is None
+    assert payload["inputs"]["sample_rate"] is None
     assert np.isfinite(payload["primary_endpoint"]["grpo-immediate-s43"]["diff"])
+
+
+# ----------------------------------------------------------------------------- committed output
+
+
+def test_committed_output_names_its_inputs_without_a_path_or_a_job():
+    path = Path(pe.OUT_FILE)
+    text = path.read_text(encoding="utf-8")
+    for token in ("manual__", "runner_job_id", "/tmp", "/Users", "/home", RUNNER_RESULTS, "://"):
+        assert token not in text, token
+    inputs = read_json(path)["inputs"]
+    assert inputs["reeval"] == "paired re-evaluation, 2026-11-10"
+    assert inputs["sample_rate"] == "base-policy samples, 2026-11-10"
+    policies = inputs["policies"]
+    assert len(policies) == 30 and set(policies.values()) == {1, 2, 3}
+    # the step-300 adapters come from the first directory, the checkpoints from the other two
+    assert all((position == 1) == ("-ckpt" not in name) for name, position in policies.items())

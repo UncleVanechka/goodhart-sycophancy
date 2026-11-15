@@ -31,6 +31,8 @@ FORMS = ("bare", "medium", "long")
 BARE_MAX_CHARS = 20
 LONG_MIN_CHARS = 200
 TIE_TOL = 1e-9
+# fetched runner outputs, not committed: <job>/results/<stage>/...
+RUNNER_RESULTS = "results/fetched"
 
 
 # ----------------------------------------------------------------------------- GRPO runs

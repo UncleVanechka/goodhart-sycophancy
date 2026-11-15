@@ -3,20 +3,25 @@ checkpoints, from samples drawn with the training rollout sampler (stage M3).
 
 ::
 
-    python -m goodhart.analysis.prereg_checkpoints --runner results/fetched
+    python -m goodhart.analysis.prereg_checkpoints --samples <dir> [<dir> ...] [--label <text>]
 
 writes ``results/analysis/prereg_m3.json`` and prints a short table.
 
 Inputs
 ------
-``<runner>/<run directory>/results/sample_rate/<policy>/samples.jsonl``, written by
-``goodhart.experiments.sample_rate``: 8 replies per prompt at temperature 1, top-p 1, top-k 0 in
-float32, on 200 validation questions x 3 opinion types, each rated by the agreeable user right
-away (``immediate``) and after learning the answer (``informed``); the base policy and the
-persona mixtures also carry the ``truth_seeking`` rating. When several run directories hold the
-same policy, the copy with the most rows is read (the newest directory on ties), which drops
-smoke runs. Policies whose rows carry no ratings, or do not have 8 samples per prompt, are
-skipped and listed in the output.
+``--samples``: directories with ``<dir>/<policy>/samples.jsonl``, written by
+``goodhart.experiments.sample_rate`` (default ``results/sample_rate``, where ``make
+sample-rate`` writes them): 8 replies per prompt at temperature 1, top-p 1, top-k 0 in float32,
+on 200 validation questions x 3 opinion types, each rated by the agreeable user right away
+(``immediate``) and after learning the answer (``informed``); the base policy and the persona
+mixtures also carry the ``truth_seeking`` rating. When several directories hold the same
+policy, the copy with the most rows is read (the later directory on the command line on ties),
+which drops smoke runs. Policies whose rows carry no ratings, or do not have 8 samples per
+prompt, are skipped and listed in the output.
+
+The output names policies, never a path or a directory: ``inputs.samples`` is the label of the
+input (``--label``, for example "rollout-sampler samples, 2026-11-10"), and the ``source`` of a
+policy is the position of the directory it was read from, counted from 1.
 
 Policy names give the run and the step: ``grpo-immediate-s43`` (α = 0), ``grpo-delayed-a0.3``
 (α = 0.3, seed 42), ``grpo-persona-mix-s43`` (persona mixture); ``-ckpt<step>`` is a saved
@@ -117,7 +122,8 @@ from goodhart.analysis.common import (
 )
 from goodhart.io import read_json, read_jsonl, write_json
 
-RUNNER_DIR = "results/fetched"
+SAMPLES_DIR = "results/sample_rate"
+SAMPLES_LABEL = "rollout-sampler samples"
 OUT_FILE = "results/analysis/prereg_m3.json"
 BON_BREAKEVEN = "results/analysis/breakeven.json"
 BON_MODEL = "qwen3-1.7b"
@@ -229,7 +235,7 @@ class PolicySamples:
     policy: Policy
     bon: BonSamples
     extra: dict[str, np.ndarray] = field(default_factory=dict)
-    source: str = ""
+    source: int | None = None
 
     @property
     def name(self) -> str:
@@ -243,7 +249,7 @@ def is_rated(rows: Sequence[dict]) -> bool:
     )
 
 
-def samples_from_rows(name: str, rows: Sequence[dict], source: str = "") -> PolicySamples:
+def samples_from_rows(name: str, rows: Sequence[dict], source: int | None = None) -> PolicySamples:
     """Rows of one ``samples.jsonl`` as :class:`PolicySamples` (records sorted by id, samples by
     ``sample_idx``). Every record must have the same number of samples and both ratings."""
     if not is_rated(rows):
@@ -284,25 +290,31 @@ def samples_from_rows(name: str, rows: Sequence[dict], source: str = "") -> Poli
     return PolicySamples(policy=parse_policy(name), bon=bon, extra=extra, source=source)
 
 
-def find_sample_files(runner_dir: str | Path) -> dict[str, Path]:
-    """``policy -> samples.jsonl`` under ``<runner>/*/results/sample_rate/``: per policy the copy
-    with the most rows, the newest run directory on ties."""
-    best: dict[str, tuple[int, str, Path]] = {}
-    for path in sorted(Path(runner_dir).glob("*/results/sample_rate/*/samples.jsonl")):
-        with path.open("rb") as handle:
-            n_rows = sum(1 for line in handle if line.strip())
-        candidate = (n_rows, path.parents[3].name, path)
-        policy = path.parent.name
-        if policy not in best or candidate[:2] > best[policy][:2]:
-            best[policy] = candidate
-    return {policy: best[policy][2] for policy in sorted(best)}
+def find_sample_files(sample_dirs: Sequence[str | Path]) -> dict[str, tuple[int, Path]]:
+    """``policy -> (position, samples.jsonl)`` over ``<dir>/<policy>/samples.jsonl`` of every
+    directory, ``position`` counting the directories from 1: per policy the copy with the most
+    rows, the later directory on ties."""
+    best: dict[str, tuple[int, int, Path]] = {}
+    for position, root in enumerate(map(Path, sample_dirs), start=1):
+        if not root.is_dir():
+            raise FileNotFoundError(f"no samples directory {root}")
+        for path in sorted(root.glob("*/samples.jsonl")):
+            with path.open("rb") as handle:
+                n_rows = sum(1 for line in handle if line.strip())
+            candidate = (n_rows, position, path)
+            policy = path.parent.name
+            if policy not in best or candidate[:2] > best[policy][:2]:
+                best[policy] = candidate
+    return {policy: best[policy][1:] for policy in sorted(best)}
 
 
-def load_policies(runner_dir: str | Path) -> tuple[dict[str, PolicySamples], dict[str, str]]:
-    """Every rated policy under ``runner_dir`` and, for the rest, why it was skipped."""
+def load_policies(
+    sample_dirs: Sequence[str | Path],
+) -> tuple[dict[str, PolicySamples], dict[str, str]]:
+    """Every rated policy in ``sample_dirs`` and, for the rest, why it was skipped."""
     loaded: dict[str, PolicySamples] = {}
     skipped: dict[str, str] = {}
-    for name, path in find_sample_files(runner_dir).items():
+    for name, (position, path) in find_sample_files(sample_dirs).items():
         rows = read_jsonl(path)
         if not is_rated(rows):
             skipped[name] = "no immediate / informed ratings"
@@ -312,7 +324,7 @@ def load_policies(runner_dir: str | Path) -> tuple[dict[str, PolicySamples], dic
         except ValueError:
             skipped[name] = "policy name not recognized"
             continue
-        samples = samples_from_rows(name, rows, source=path.parents[3].name)
+        samples = samples_from_rows(name, rows, source=position)
         if samples.bon.n_samples != GROUP:
             skipped[name] = f"{samples.bon.n_samples} samples per prompt, not {GROUP}"
             continue
@@ -1059,8 +1071,10 @@ def analyze(
     seed: int = 0,
     bon_payload: dict[str, Any] | None = None,
     skipped: dict[str, str] | None = None,
+    label: str = SAMPLES_LABEL,
 ) -> dict[str, Any]:
-    """The full payload: per-policy numbers, the three predictions and the extras."""
+    """The full payload: per-policy numbers, the three predictions and the extras. ``label``
+    says what the samples are, in place of their directories."""
     if not samples:
         raise ValueError("no rated sample files found")
     sizes = {name: s.bon.question_index()[1] for name, s in samples.items()}
@@ -1078,6 +1092,7 @@ def analyze(
         "inputs": {
             "n_boot": n_boot,
             "seed": seed,
+            "samples": label,
             "policies": {name: s.source for name, s in samples.items()},
             "skipped": skipped or {},
         },
@@ -1139,9 +1154,20 @@ def render_text(payload: dict[str, Any]) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> dict[str, Any]:
-    """CLI: ``python -m goodhart.analysis.prereg_checkpoints --runner results/fetched``."""
+    """CLI: ``python -m goodhart.analysis.prereg_checkpoints --samples <dir> [<dir> ...]``."""
     parser = argparse.ArgumentParser(description="pre-registered predictions 6-8 (stage M3)")
-    parser.add_argument("--runner", default=RUNNER_DIR, help="directory with the fetched run outputs")
+    parser.add_argument(
+        "--samples",
+        nargs="+",
+        default=[SAMPLES_DIR],
+        metavar="DIR",
+        help="sample_rate outputs: <DIR>/<policy>/samples.jsonl",
+    )
+    parser.add_argument(
+        "--label",
+        default=SAMPLES_LABEL,
+        help="what the --samples directories are, written to the output in their place",
+    )
     parser.add_argument("--out", default=OUT_FILE, help="JSON file to write")
     parser.add_argument(
         "--bon-breakeven",
@@ -1151,10 +1177,10 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     parser.add_argument("--n-boot", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
-    samples, skipped = load_policies(args.runner)
+    samples, skipped = load_policies(args.samples)
     bon_file = Path(args.bon_breakeven)
     bon_payload = read_json(bon_file) if bon_file.is_file() else None
-    payload = analyze(samples, args.n_boot, args.seed, bon_payload, skipped)
+    payload = analyze(samples, args.n_boot, args.seed, bon_payload, skipped, args.label)
     write_json(args.out, payload)
     print("\n".join(render_text(payload)))
     print(f"\nwrote {args.out}")

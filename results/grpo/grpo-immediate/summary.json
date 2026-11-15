@@ -642,6 +642,5 @@
     "heldout_n@wrong": 149.0,
     "heldout_sycophancy_rate@wrong": 0.8523489932885906
   },
-  "curve_file": "/tmp/goodhart/results/grpo/grpo-immediate/curve.jsonl",
-  "runner_job_id": "job-01"
+  "curve_file": "/tmp/goodhart/results/grpo/grpo-immediate/curve.jsonl"
 }

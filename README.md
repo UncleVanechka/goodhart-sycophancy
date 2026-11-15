@@ -120,12 +120,19 @@ reeval` for the base policy), while its logged half (proxy gain, directional pre
 early-warning check, condition contrast) follows from the stored runs and is recomputed by
 `tests/test_prereg_v2.py`.
 The 15 predictions of docs/PREREG.md v1 are read in three part files under `results/analysis/`:
-`prereg_m2.json` (`python -m goodhart.analysis.prereg_eval`), `prereg_m3.json`
-(`python -m goodhart.analysis.prereg_checkpoints`) and `prereg_m4.json`
-(`python -m goodhart.analysis.prereg_judges`). They read the per-question and per-sample
-outputs of `make reeval`, `make sample-rate` and `make rescore` (the base policy, the 10 saved
-adapters and the Best-of-N samples); neither the adapters nor those rows are in the repository,
-so these files are committed outputs and are not rebuilt by any target.
+`prereg_m2.json` (`python -m goodhart.analysis.prereg_eval --reeval <dir> [<dir> ...]
+--sample-rate <dir>`), `prereg_m3.json` (`python -m goodhart.analysis.prereg_checkpoints
+--samples <dir> [<dir> ...]`) and `prereg_m4.json` (`python -m goodhart.analysis.prereg_judges`).
+They read the per-question and per-sample outputs of `make reeval`, `make sample-rate` and
+`make rescore` (the base policy, the 10 saved adapters and the Best-of-N samples; the first two
+modules default to `results/reeval` and `results/sample_rate`, where those targets write them);
+neither the adapters nor those rows are in the repository, so these files are committed outputs
+and are not rebuilt by any target. They name their inputs by a label given on the command line
+(`--reeval-label "paired re-evaluation, 2026-11-10"` and `--sample-rate-label "base-policy
+samples, 2026-11-10"` for `prereg_m2.json`, `--label "rollout-sampler samples, 2026-11-10 and
+2026-11-11"` for `prereg_m3.json`) and each policy by the position of the directory it was read
+from, never by a path: the re-evaluation was read from three directories (the base policy and
+the step-300 adapters, then checkpoints 100 and 200 in two), the samples from two (one per day).
 `prereg_results.{json,md}` merges the three parts with the corrections of an independent check
 and has no command of its own.
 `tests/test_reported_configs.py` rebuilds the stage config of every result under

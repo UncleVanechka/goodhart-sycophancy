@@ -3,24 +3,31 @@ evaluated on the paired greedy re-evaluation of the saved policies.
 
 ::
 
-    python -m goodhart.analysis.prereg_eval --runner-dir results/fetched
+    python -m goodhart.analysis.prereg_eval --reeval <dir> [<dir> ...] --sample-rate <dir> \\
+        [--reeval-label <text>] [--sample-rate-label <text>]
 
 writes ``results/analysis/prereg_m2.json`` and prints one line per prediction.
 
 Inputs
 ------
-``--runner-dir`` holds one directory per fetched runner job. Only job basenames and policy names
-are written to the output, never a path.
+Each input is a directory with one sub-directory per policy. The output names policies, never
+a path or a directory: ``inputs`` holds the label of each input (``--reeval-label``,
+``--sample-rate-label``, for example "paired re-evaluation, 2026-11-10") and, per policy, the
+position of the ``--reeval`` directory it was read from, counted from 1.
 
-- ``<runner-dir>/<job>/results/reeval/<policy>/items.jsonl`` and ``summary.json``: greedy replies
-  of the base policy and the saved adapters, decoded in float32 as in the training-time
-  evaluation, one row per (split, record). The base policy and the step-300 adapters cover
-  validation, test and the full SycophancyEval answer set (7268 prompts); checkpoints 100 and
-  200 cover validation, test and a fixed subset of SycophancyEval (2404 prompts).
-  ``summary.json`` carries the sanity gate (re-evaluated metrics against the logged curve).
-- ``<runner-dir>/<job>/results/sample_rate/base-none-val-test/samples.jsonl``: 8 samples of the
-  base policy, drawn with the GRPO rollout sampler, on every no-opinion validation and test
-  prompt (prediction 5).
+- ``--reeval``: ``<dir>/<policy>/items.jsonl`` and ``summary.json``, written by
+  ``goodhart.experiments.reeval`` (default ``results/reeval``, where ``make reeval`` writes
+  them): greedy replies of the base policy and the saved adapters, decoded in float32 as in
+  the training-time evaluation, one row per (split, record). The base policy and the step-300
+  adapters cover validation, test and the full SycophancyEval answer set (7268 prompts);
+  checkpoints 100 and 200 cover validation, test and a fixed subset of SycophancyEval (2404
+  prompts). ``summary.json`` carries the sanity gate (re-evaluated metrics against the logged
+  curve). One directory or several; a policy found in two of them is an error.
+- ``--sample-rate``: ``<dir>/base-none-val-test/samples.jsonl``, written by
+  ``goodhart.experiments.sample_rate`` (default ``results/sample_rate``, where ``make
+  sample-rate`` writes it): 8 samples of the base policy, drawn with the GRPO rollout sampler,
+  on every no-opinion validation and test prompt (prediction 5). An empty value leaves
+  prediction 5 not testable.
 
 Policy names give the run, condition, seed and step: ``grpo-immediate-s43`` (α = 0),
 ``grpo-delayed-s43-a0.3`` (α = 0.3), ``grpo-persona-mix-s43`` (persona mixture); no
@@ -121,13 +128,10 @@ from goodhart.analysis.paired import (
 )
 from goodhart.io import read_json, read_jsonl, write_json
 
-RUNNER_DIR = "results/fetched"
-REEVAL_JOBS = (
-    "job-14",
-    "job-15",
-    "job-16",
-)
-SAMPLE_RATE_JOB = "job-17"
+REEVAL_DIR = "results/reeval"
+SAMPLE_RATE_DIR = "results/sample_rate"
+REEVAL_LABEL = "paired re-evaluation"
+SAMPLE_RATE_LABEL = "base-policy samples"
 OUT_FILE = "results/analysis/prereg_m2.json"
 
 BASE = "base"
@@ -346,30 +350,32 @@ def policies_of(items: dict[str, Items]) -> list[Policy]:
 
 
 def load_reeval(
-    runner_dir: str | Path, jobs: Sequence[str]
-) -> tuple[dict[str, Items], dict[str, dict], dict[str, str]]:
-    """``items[policy][record_id] = row``, ``summaries[policy]`` and ``sources[policy] = job``
-    from ``<runner_dir>/<job>/results/reeval/<policy>/``.
+    reeval_dirs: Sequence[str | Path],
+) -> tuple[dict[str, Items], dict[str, dict], dict[str, int]]:
+    """``items[policy][record_id] = row``, ``summaries[policy]`` and ``sources[policy]``, the
+    position of the directory that holds the policy (counted from 1), from
+    ``<dir>/<policy>/`` of every directory in ``reeval_dirs``.
 
-    A policy found in two jobs, or a record twice in one policy, is an error.
+    A policy found in two directories, or a record twice in one policy, is an error.
     """
     items: dict[str, Items] = {}
     summaries: dict[str, dict] = {}
-    sources: dict[str, str] = {}
-    for job in jobs:
-        root = Path(runner_dir) / job / "results" / "reeval"
+    sources: dict[str, int] = {}
+    for position, root in enumerate(map(Path, reeval_dirs), start=1):
         if not root.is_dir():
-            raise FileNotFoundError(f"no re-evaluation results for job {job} under {runner_dir}")
+            raise FileNotFoundError(f"no re-evaluation directory {root}")
         for path in sorted(root.glob("*/items.jsonl")):
             name = path.parent.name
             if name in sources:
-                raise ValueError(f"policy {name} is in both {sources[name]} and {job}")
-            sources[name] = job
+                raise ValueError(
+                    f"policy {name} is in re-evaluation directories {sources[name]} and {position}"
+                )
+            sources[name] = position
             rows: Items = {}
             for row in read_jsonl(path):
                 rid = row["record_id"]
                 if rid in rows:
-                    raise ValueError(f"{job}/{name}: record {rid} appears twice")
+                    raise ValueError(f"{name}: record {rid} appears twice in directory {position}")
                 rows[rid] = row
             items[name] = rows
             summary = path.parent / "summary.json"
@@ -379,11 +385,12 @@ def load_reeval(
     return items, summaries, sources
 
 
-def load_base_none_samples(runner_dir: str | Path, job: str) -> list[dict]:
-    """The base policy's samples on the no-opinion validation and test prompts."""
-    path = Path(runner_dir) / job / "results" / "sample_rate" / BASE_NONE_SAMPLES / "samples.jsonl"
+def load_base_none_samples(sample_rate_dir: str | Path) -> list[dict]:
+    """The base policy's samples on the no-opinion validation and test prompts, from
+    ``<sample_rate_dir>/base-none-val-test/samples.jsonl``."""
+    path = Path(sample_rate_dir) / BASE_NONE_SAMPLES / "samples.jsonl"
     if not path.is_file():
-        raise FileNotFoundError(f"no {BASE_NONE_SAMPLES} samples for job {job} under {runner_dir}")
+        raise FileNotFoundError(f"no {BASE_NONE_SAMPLES} samples in {sample_rate_dir}")
     return read_jsonl(path)
 
 
@@ -1605,14 +1612,16 @@ def _strip_private(obj: Any) -> Any:
 
 
 def analyze(
-    runner_dir: str | Path = RUNNER_DIR,
-    reeval_jobs: Sequence[str] = REEVAL_JOBS,
-    sample_rate_job: str | None = SAMPLE_RATE_JOB,
+    reeval_dirs: Sequence[str | Path] = (REEVAL_DIR,),
+    sample_rate_dir: str | Path | None = SAMPLE_RATE_DIR,
     n_boot: int = 10_000,
     seed: int = 0,
+    reeval_label: str = REEVAL_LABEL,
+    sample_rate_label: str = SAMPLE_RATE_LABEL,
 ) -> dict[str, Any]:
-    """Predictions 1-5, 14, 15 and the descriptive extras, as one JSON-ready payload."""
-    items, summaries, sources = load_reeval(runner_dir, reeval_jobs)
+    """Predictions 1-5, 14, 15 and the descriptive extras, as one JSON-ready payload. Without
+    ``sample_rate_dir`` prediction 5 is not testable."""
+    items, summaries, sources = load_reeval(reeval_dirs)
     policies = policies_of(items)
     finals = [p for p in policies if p.final]
     small_boot = min(n_boot, DECOMPOSITION_BOOT)
@@ -1631,8 +1640,8 @@ def analyze(
         "3": prediction_3(primary),
         "4": prediction_4(by_template, by_condition),
     }
-    if sample_rate_job:
-        stratum = knows_stratum(load_base_none_samples(runner_dir, sample_rate_job))
+    if sample_rate_dir:
+        stratum = knows_stratum(load_base_none_samples(sample_rate_dir))
         flips = flip_rates(items, finals, stratum["base_ids"], n_boot, seed)
         predictions["5"] = prediction_5(flips, stratum)
         stratum_out = {k: v for k, v in stratum.items() if k != "base_ids"}
@@ -1691,8 +1700,8 @@ def analyze(
     payload = {
         "prereg": "docs/PREREG.md, v1 and the v1.1 amendment; predictions 1-5, 14, 15",
         "inputs": {
-            "reeval_jobs": list(reeval_jobs),
-            "sample_rate_job": sample_rate_job,
+            "reeval": reeval_label,
+            "sample_rate": sample_rate_label if sample_rate_dir else None,
             "policies": {p.name: sources[p.name] for p in policies},
             "n_boot": n_boot,
             "n_boot_decomposition_and_class_stability": small_boot,
@@ -1722,19 +1731,41 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     parser = argparse.ArgumentParser(
         description="evaluate pre-registered predictions 1-5, 14 and 15 on the re-evaluation"
     )
-    parser.add_argument("--runner-dir", default=RUNNER_DIR, help="directory of fetched runner jobs")
-    parser.add_argument("--reeval-jobs", nargs="+", default=list(REEVAL_JOBS))
-    parser.add_argument("--sample-rate-job", default=SAMPLE_RATE_JOB)
+    parser.add_argument(
+        "--reeval",
+        nargs="+",
+        default=[REEVAL_DIR],
+        metavar="DIR",
+        help="re-evaluation outputs: <DIR>/<policy>/items.jsonl and summary.json",
+    )
+    parser.add_argument(
+        "--sample-rate",
+        default=SAMPLE_RATE_DIR,
+        metavar="DIR",
+        help="sample_rate outputs with <DIR>/base-none-val-test/samples.jsonl; an empty value "
+        "leaves prediction 5 not testable",
+    )
+    parser.add_argument(
+        "--reeval-label",
+        default=REEVAL_LABEL,
+        help="what the --reeval directories are, written to the output in their place",
+    )
+    parser.add_argument(
+        "--sample-rate-label",
+        default=SAMPLE_RATE_LABEL,
+        help="what the --sample-rate directory is, written to the output in its place",
+    )
     parser.add_argument("--out", default=OUT_FILE)
     parser.add_argument("--n-boot", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
     payload = analyze(
-        args.runner_dir,
-        args.reeval_jobs,
-        args.sample_rate_job or None,
+        args.reeval,
+        args.sample_rate or None,
         n_boot=args.n_boot,
         seed=args.seed,
+        reeval_label=args.reeval_label,
+        sample_rate_label=args.sample_rate_label,
     )
     write_json(args.out, payload)
     gate = payload["sanity_gate"]

@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from fetched_outputs import BASE_ITEMS_SHA256, paired_base_items, paired_reeval_dirs
 from goodhart.analysis import floor_arm, prereg_eval, prereg_v3
 from goodhart.analysis.common import Run
 from goodhart.analysis.floor_arm import (
@@ -49,12 +50,10 @@ from goodhart.simulator.backend import MockBackend
 from goodhart.simulator.reward import Floor, FlooredReward, build_reward_fn, immediate_reward
 
 STRATUM_FILE = Path(floor_arm.STRATUM_FILE)
-# the base policy's rows of the paired re-evaluation; fetched job outputs are not committed
-BASE_ITEMS = (
-    Path(prereg_eval.RUNNER_DIR) / prereg_eval.REEVAL_JOBS[0] / "results/reeval/base/items.jsonl"
-)
-# sha256 of that file, and of the frozen record ids joined by newlines
-BASE_ITEMS_SHA256 = "344172ad060d4787c434cc58baefad9366bd5a885cf2e4353a991a63ffc52c34"
+# the base policy's rows of the paired re-evaluation, found by their sha256 among the fetched
+# runner outputs (``None`` when they are not on disk: they are not committed)
+BASE_ITEMS = paired_base_items()
+# sha256 of the frozen record ids joined by newlines
 STRATUM_IDS_SHA256 = "96d744a539d7f87fdbf8bc87ced1f8ce29b44278e5bf4965ae282ee94bb2a158"
 # every constant of prereg_v3 with the value docs/PREREG.md v3 gives it
 REGISTERED = {
@@ -243,11 +242,10 @@ def test_frozen_stratum_file_holds_record_ids_only():
 
 
 @pytest.mark.skipif(
-    not BASE_ITEMS.is_file(),
+    BASE_ITEMS is None,
     reason=f"the re-evaluation items (sha256 {BASE_ITEMS_SHA256}) are not on disk",
 )
 def test_frozen_stratum_is_reproduced_from_the_base_items():
-    assert hashlib.sha256(BASE_ITEMS.read_bytes()).hexdigest() == BASE_ITEMS_SHA256
     items = read_jsonl(BASE_ITEMS)
     assert freeze_stratum(items) == read_json(STRATUM_FILE)
     wrong = [row for row in items if row["opinion"] == "wrong" and row["split"] in ("val", "test")]
@@ -939,17 +937,12 @@ def test_stratum_gate_needs_the_registered_size_and_floor():
     assert floor_arm.stratum_block(short, None, None)["ok"] is False
 
 
-REEVAL_ROOTS = [
-    Path(prereg_eval.RUNNER_DIR) / job / "results" / "reeval" for job in prereg_eval.REEVAL_JOBS
-]
-
-
 @pytest.mark.skipif(
-    not all(root.is_dir() for root in REEVAL_ROOTS),
+    paired_reeval_dirs() is None,
     reason="the paired re-evaluation items are not on disk",
 )
 def test_no_hold_class_policy_rises_on_the_committed_reevaluation():
-    items, _, _ = prereg_eval.load_reeval(prereg_eval.RUNNER_DIR, prereg_eval.REEVAL_JOBS)
+    items, _, _ = prereg_eval.load_reeval(paired_reeval_dirs())
     stratum = read_json(STRATUM_FILE)
     ids = stratum["record_ids"]
     base = items["base"]

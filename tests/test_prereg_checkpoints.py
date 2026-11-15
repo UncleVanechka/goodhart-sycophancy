@@ -2,14 +2,15 @@
 
 import json
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from goodhart.analysis import breakeven
 from goodhart.analysis import prereg_checkpoints as pc
-from goodhart.analysis.common import percentile_interval, resample_weights
-from goodhart.io import write_jsonl
+from goodhart.analysis.common import RUNNER_RESULTS, percentile_interval, resample_weights
+from goodhart.io import read_json, write_jsonl
 
 GOLD, USER, OTHER = "A", "D", "B"
 LETTER = {"gold": GOLD, "user": USER, "other": OTHER}
@@ -145,7 +146,7 @@ def test_samples_from_rows_rejects_unrated_and_ragged_rows():
 
 def test_load_policies_takes_the_larger_copy_and_lists_skipped(tmp_path):
     def put(run: str, policy: str, rows: list[dict]) -> None:
-        write_jsonl(tmp_path / run / "results" / "sample_rate" / policy / "samples.jsonl", rows)
+        write_jsonl(tmp_path / run / policy / "samples.jsonl", rows)
 
     full = make_rows("base", TWO_FORMS)
     put("run_smoke", "base", make_rows("base", TWO_FORMS, n_questions=1, n_samples=2))
@@ -154,14 +155,22 @@ def test_load_policies_takes_the_larger_copy_and_lists_skipped(tmp_path):
     put("run_b", "base-none-val-test", [{**row, "ratings": {}} for row in full[:8]])
     put("run_b", "odd-name", full)
     put("run_b", "grpo-persona-mix", make_rows("grpo-persona-mix", TWO_FORMS, n_samples=4))
-    files = pc.find_sample_files(tmp_path)
-    assert files["base"].parents[3].name == "run_a"
-    loaded, skipped = pc.load_policies(tmp_path)
+    put("run_c", "base", full)
+    dirs = [tmp_path / run for run in ("run_smoke", "run_a", "run_b")]
+    files = pc.find_sample_files(dirs)
+    assert files["base"] == (2, tmp_path / "run_a" / "base" / "samples.jsonl")
+    # on equal rows the later directory is read
+    for first, second in (("run_a", "run_c"), ("run_c", "run_a")):
+        tied = pc.find_sample_files([tmp_path / first, tmp_path / second])
+        assert tied["base"] == (2, tmp_path / second / "base" / "samples.jsonl")
+    loaded, skipped = pc.load_policies(dirs)
     assert list(loaded) == ["base", "grpo-delayed-a0.3"]
-    assert loaded["base"].source == "run_a"
+    assert loaded["base"].source == 2 and loaded["grpo-delayed-a0.3"].source == 3
     assert loaded["base"].bon.parsed.shape == (36, 8)
     assert set(skipped) == {"base-none-val-test", "odd-name", "grpo-persona-mix"}
     assert skipped["grpo-persona-mix"] == "4 samples per prompt, not 8"
+    with pytest.raises(FileNotFoundError):
+        pc.find_sample_files([tmp_path / "run_a", tmp_path / "missing"])
 
 
 # ----------------------------------------------------------------------------- estimators
@@ -483,8 +492,7 @@ def test_analyze_prediction_6_from_samples_and_question_check():
 # ----------------------------------------------------------------------------- CLI
 
 
-def test_cli_writes_json_with_basenames_only(tmp_path, capsys):
-    runner = tmp_path / "fetched"
+def test_cli_writes_json_without_paths(tmp_path, capsys):
     for run, policy, spec, truth in (
         ("run_a", "base", TWO_FORMS, True),
         ("run_a", "grpo-delayed-a0.3", A050, False),
@@ -495,10 +503,7 @@ def test_cli_writes_json_with_basenames_only(tmp_path, capsys):
         ("run_b", "grpo-delayed-s44-a0.3", HIGH_REWARD, False),
         ("run_b", "grpo-persona-mix", TWO_FORMS, True),
     ):
-        write_jsonl(
-            runner / run / "results" / "sample_rate" / policy / "samples.jsonl",
-            make_rows(policy, spec, truth=truth),
-        )
+        write_jsonl(tmp_path / run / policy / "samples.jsonl", make_rows(policy, spec, truth=truth))
     bon = tmp_path / "breakeven.json"
     entry = {"alpha_star": 0.4, "alpha_star_note": None, "alpha_star_ci": [0.3, 0.5]}
     forms = {form: entry for form in breakeven.FORM_KEYS}
@@ -519,12 +524,16 @@ def test_cli_writes_json_with_basenames_only(tmp_path, capsys):
         encoding="utf-8",
     )
     out = tmp_path / "analysis" / "prereg_m3.json"
-    args = ["--runner", str(runner), "--out", str(out), "--n-boot", "40", "--bon-breakeven", str(bon)]
-    payload = pc.main(args)
+    samples = ["--samples", str(tmp_path / "run_a"), str(tmp_path / "run_b")]
+    args = [*samples, "--out", str(out), "--n-boot", "40", "--bon-breakeven", str(bon)]
+    payload = pc.main([*args, "--label", "toy samples"])
     text = out.read_text(encoding="utf-8")
     assert json.loads(text) == payload
     assert str(tmp_path) not in text
-    assert payload["inputs"]["policies"]["base"] == "run_a"
+    assert "run_a" not in text and "run_b" not in text
+    assert payload["inputs"]["samples"] == "toy samples"
+    assert payload["inputs"]["policies"]["base"] == 1
+    assert payload["policies"]["grpo-persona-mix"]["source"] == 2
     assert list(payload["policies"])[0] == "base"
     assert set(payload["predictions"]) == {"6", "7", "8"}
     assert payload["predictions"]["7"]["verdict"] == pc.CONFIRMED
@@ -537,5 +546,22 @@ def test_cli_writes_json_with_basenames_only(tmp_path, capsys):
     assert "7. confirmed" in printed and "mixture push, grpo-persona-mix" in printed
 
     # without the Best-of-N file the step-0 block has no comparison
-    missing = ["--runner", str(runner), "--out", str(out), "--n-boot", "40", "--bon-breakeven", "none.json"]
-    assert "best_of_n_estimate" not in pc.main(missing)["step0"]
+    missing = [*samples, "--out", str(out), "--n-boot", "40", "--bon-breakeven", "none.json"]
+    without = pc.main(missing)
+    assert "best_of_n_estimate" not in without["step0"]
+    assert without["inputs"]["samples"] == pc.SAMPLES_LABEL
+
+
+# ----------------------------------------------------------------------------- committed output
+
+
+def test_committed_output_names_its_inputs_without_a_path_or_a_job():
+    path = Path(pc.OUT_FILE)
+    text = path.read_text(encoding="utf-8")
+    for token in ("manual__", "runner_job_id", "/tmp", "/Users", "/home", RUNNER_RESULTS, "://"):
+        assert token not in text, token
+    payload = read_json(path)
+    assert payload["inputs"]["samples"] == "rollout-sampler samples, 2026-11-10 and 2026-11-11"
+    sources = payload["inputs"]["policies"]
+    assert len(sources) == 15 and set(sources.values()) == {1, 2}
+    assert {name: entry["source"] for name, entry in payload["policies"].items()} == sources

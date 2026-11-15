@@ -72,7 +72,9 @@ step 300 and at step 600 (``final_step`` of ``floor_arm.run_state``).
   to come; both are computed (``absent_runs`` in :data:`READINGS`). Final, it is not run: no
   step 300, no label at step 600, no proxy gain, not counted. Still to come, it is a run still
   to be read at steps 0, 300 and 600 that can take any outcome there, may be counted with an
-  outcome not known, and may have a proxy gain and U over 5 %.
+  outcome not known (F5 with its R anywhere in [0, 1]), and may have a proxy gain and U over
+  5 %; its step-0 and step-300 gates are still to come, so whether F is comparable with v3 and
+  whether the step-300 gate passes are reported under both options.
 - **Class 1.** Its sentence is printed literally, "argued (or padded)" as registered; the
   padded check is reported beside it and changes no wording.
 
@@ -269,6 +271,7 @@ EXTRAPOLATION_LIMITS = {
 }
 
 CONFIRMED, REFUTED, NOT_TESTABLE = "confirmed", "refuted", "not testable"
+GATE_NOT_KNOWN = "not known"
 WITHOUT_VERDICT = "without a verdict"
 NOT_AGREEING, AGREEING = "unparsed not agreeing", "unparsed agreeing"
 CUT_AFTER = "cut short after step 300"
@@ -865,6 +868,38 @@ def f5_reading(
     return out
 
 
+def f5_bounds(
+    rows: Mapping[str, dict],
+    counted: Sequence[str],
+    still_to_run: Sequence[str],
+    reading: str,
+    printed: bool,
+) -> dict[str, Any]:
+    """F5 under one reading of unparsed replies with the runs ``still_to_run`` counted beside
+    ``counted``, each with an R at step 600 still to come anywhere in [0, 1], as is a counted
+    run whose R is not known: the smallest and the largest mean R they allow (``mean_bounds``)
+    and the verdict, confirmed or refuted when both bounds give it, else not testable. Without
+    such runs, :func:`f5_reading`"""
+    names = [*counted, *still_to_run]
+    out = f5_reading(rows, names, reading, printed)
+    known = [out["R"][name] for name in counted]
+    if not still_to_run and None not in known:
+        return out
+    level = out["level"]
+    out["mean_bounds"] = None
+    if len(names) < MIN_COUNTED or level is None:
+        return out
+    total = float(sum(value for value in known if value is not None))
+    unknown = sum(value is None for value in known) + len(still_to_run)
+    low, high = total / len(names), (total + unknown) / len(names)
+    out["mean_bounds"] = [low, high]
+    if low >= level - EPS:
+        out["verdict"] = CONFIRMED
+    elif high < level - EPS:
+        out["verdict"] = REFUTED
+    return out
+
+
 def f5_bootstrap(
     replies: Mapping[str, Mapping[str, tuple[Items | None, frozenset[str]]]],
     base: Items | None,
@@ -988,14 +1023,17 @@ def evaluate(world: Mapping[str, int], rows: Mapping[str, dict], gates: Mapping)
         f3.append(at_least_two(outcomes))
     out["F3"] = merge(f3)
     out["F3_on_half"] = gates["f3_on_half"]
-    f5 = [f5_reading(rows, counted, reading, printed)["verdict"] for reading in readings]
-    if possible:
-        # counted, a run still to be run has an R that is not known
-        f5 += [
-            f5_reading(rows, [*counted, *possible], reading, printed)["verdict"]
-            for reading in readings
-        ]
-    out["F5"] = merge(f5)
+    # every run still to be run is counted or not, and counted has an R still to come
+    extras = [
+        list(extra)
+        for size in range(len(possible) + 1)
+        for extra in itertools.combinations(possible, size)
+    ]
+    out["F5"] = merge(
+        f5_bounds(rows, counted, extra, reading, printed)["verdict"]
+        for reading in readings
+        for extra in extras
+    )
     out["unparsed_double_reading"] = trigger
     out["counted"] = counted
     out["possibly_counted"] = possible
@@ -1209,7 +1247,7 @@ def sentences(
             )
 
     f0 = verdicts["F0"]
-    gate = gates["step300"]["passed"][world["levels"]]
+    gate = gates["step300"]["passed_by_absent_runs"][world["absent_runs"]][world["levels"]]
     n = sum(row["label_300"] in (RISE, ARGUED_COLLAPSE, NOT_VALID) for row in rows.values())
     if any(pending_300(row, absent_pending) for row in rows.values()):
         # a label still to be read at step 300 can refute F0, confirm it or change its k
@@ -1425,24 +1463,72 @@ def analyze_run(
 # ----------------------------------------------------------------------------- the arm
 
 
+def _by_options(values: Mapping[tuple[int, ...], Any], dimensions: Sequence[str]) -> dict:
+    """``values`` keyed by an option of each reading of ``dimensions`` in turn, in the form of
+    ``depends_on``: for every reading whose options give different values, the values each
+    option gives"""
+    out: dict[str, dict[str, list[str]]] = {}
+    for index, dimension in enumerate(dimensions):
+        options = READINGS[dimension]
+        found = {
+            options[i]: sorted({str(value) for key, value in values.items() if key[index] == i})
+            for i in range(len(options))
+        }
+        if len({tuple(value) for value in found.values()}) > 1:
+            out[dimension] = found
+    return out
+
+
+def _gate_value(ok: bool | None) -> str:
+    return GATE_NOT_KNOWN if ok is None else "passed" if ok else "not passed"
+
+
 def step300_gate(rows: Mapping[str, dict]) -> dict[str, Any]:
     """Every run's S at step 300 inside the band (the v3 mean ± 5 points, the edges inside; on
-    the validation half 43.0 ± 5 %); a run without a step 300 fails it. ``passed`` holds the
-    verdict under the derived band (index 0) and the printed band (index 1)."""
+    the validation half 43.0 ± 5 %); a run without a step 300 fails it. A run whose S at step
+    300 is still to be read (:func:`pending_300`) leaves the gate not known unless another run
+    fails it; with the second option of ``absent_runs`` so does a run absent altogether or a
+    dead job, which with the first has no step 300 and fails it.
+
+    ``passed_by_absent_runs[a][i]`` holds the gate under option ``a`` of ``absent_runs`` with
+    the derived band (``i`` 0) or the printed band (``i`` 1), ``None`` when not known;
+    ``passed[i]`` the two options of ``absent_runs`` merged. The verdict and its consequence
+    are those every combination gives, else not known, with ``depends_on`` naming the readings
+    whose options differ"""
     runs: dict[str, Any] = {}
-    passed = []
-    for printed in (False, True):
-        bands = step300_bands(printed)
-        verdicts = []
-        for name, row in rows.items():
-            block = row["steps"]["300"]
-            value = (block["measures"] or {}).get("S")
-            half = bool(block["endpoint"]["fallback"])
-            inside = in_band(value, bands[half])
-            runs.setdefault(name, {"S": value, "on_half": half if value is not None else None})
-            runs[name]["in_band_printed" if printed else "in_band"] = inside
-            verdicts.append(inside is True)
-        passed.append(all(verdicts))
+    for name, row in rows.items():
+        block = row["steps"]["300"]
+        value = (block["measures"] or {}).get("S")
+        half = bool(block["endpoint"]["fallback"])
+        runs[name] = {
+            "S": value,
+            "on_half": half if value is not None else None,
+            "in_band": in_band(value, step300_bands(False)[half]),
+            "in_band_printed": in_band(value, step300_bands(True)[half]),
+            "still_to_be_read": pending_300(row),
+            "still_to_be_read_with_absent_runs_still_to_run": pending_300(row, True),
+        }
+    by_option = [
+        [
+            _and(
+                *(
+                    None
+                    if runs[name][key] is None and pending_300(row, pending)
+                    else runs[name][key] is True
+                    for name, row in rows.items()
+                )
+            )
+            for key in ("in_band", "in_band_printed")
+        ]
+        for pending in (False, True)
+    ]
+    values = {
+        (printed, absent): _gate_value(by_option[absent][printed])
+        for printed in (0, 1)
+        for absent in (0, 1)
+    }
+    found = set(values.values())
+    verdict = found.pop() if len(found) == 1 else GATE_NOT_KNOWN
     return {
         "v3_mean": V3_S300,
         "v3_mean_val": V3_S300_VAL,
@@ -1451,9 +1537,11 @@ def step300_gate(rows: Mapping[str, dict]) -> dict[str, Any]:
         "band_printed": list(STEP300_BAND_PRINTED),
         "band_val_printed": list(STEP300_BAND_VAL_PRINTED),
         "runs": runs,
-        "passed": passed,
-        "verdict": merge("passed" if ok else "not passed" for ok in passed),
-        "consequence": None if all(passed) else STEP300_FAILED,
+        "passed": [merge_values(option[i] for option in by_option) for i in (0, 1)],
+        "passed_by_absent_runs": by_option,
+        "verdict": verdict,
+        "consequence": STEP300_FAILED if verdict == "not passed" else None,
+        "depends_on": _by_options(values, ("levels", "absent_runs")),
     }
 
 
@@ -1597,9 +1685,18 @@ def analyze(
             for name, row in rows.items()
         },
     }
-    gates["step0"]["comparable"] = (
-        False if gates["step0"]["failed"] else None if gates["step0"]["unknown"] else True
-    )
+    # with the second option of ``absent_runs`` the step-0 gate of a run absent altogether or of
+    # a dead job's run is still to come
+    step0 = gates["step0"]
+    step0["unknown_with_absent_runs_still_to_run"] = [
+        name for name, row in rows.items() if name in step0["unknown"] or is_absent(row)
+    ]
+    step0["comparable_by_absent_runs"] = [
+        False if step0["failed"] else None if step0[key] else True
+        for key in ("unknown", "unknown_with_absent_runs_still_to_run")
+    ]
+    step0["comparable"] = merge_values(step0["comparable_by_absent_runs"])
+    step0["depends_on"] = _by_option("absent_runs", step0["comparable_by_absent_runs"])
 
     worlds = [
         dict(zip(READINGS, combo, strict=True))
@@ -1908,6 +2005,10 @@ def _gate_text(ok: bool | None, dead_job: bool, passed: str, failed: str) -> str
     return "not run" if ok is None else passed if ok else failed
 
 
+def _depends_text(depends_on: Mapping[str, Any]) -> str:
+    return f" (depends on: {', '.join(sorted(depends_on))})" if depends_on else ""
+
+
 def _verdict_text(entry: dict) -> str:
     verdict = entry["verdict"]
     if entry["depends_on"]:
@@ -1989,6 +2090,16 @@ def render_markdown(payload: dict[str, Any]) -> str:
     step300 = gates["step300"]
     if step300["consequence"]:
         lines.append(f"Step-300 gate {step300['verdict']}: {step300['consequence']}.")
+    elif step300["verdict"] == GATE_NOT_KNOWN:
+        lines.append(
+            f"Step-300 gate not known{_depends_text(step300['depends_on'])}; if it is not "
+            f"passed, {STEP300_FAILED}."
+        )
+    if gates["step0"]["comparable"] is None:
+        lines.append(
+            "Step-0 gate not known for every run"
+            f"{_depends_text(gates['step0']['depends_on'])}; if one fails, no sentence is used."
+        )
     if arm["not_run"]:
         lines.append(f"Not run: {_names(arm['not_run'])}.")
     lines += [
@@ -2062,14 +2173,15 @@ def render_markdown(payload: dict[str, Any]) -> str:
         )
         band = gates["step300"]["runs"][name]
         inside = band.get("in_band")
-        gate_rows.append(
-            [
-                "step 300 band",
-                f"`{name}`",
-                f"S {_pct(band['S'])}: "
-                + ("not run" if inside is None else "inside" if inside else "outside"),
-            ]
-        )
+        if inside is not None:
+            band_text = "inside" if inside else "outside"
+        elif band.get("still_to_be_read"):
+            band_text = "still to be read"
+        elif band.get("still_to_be_read_with_absent_runs_still_to_run"):
+            band_text = "not run (still to come: depends on absent_runs)"
+        else:
+            band_text = "not run"
+        gate_rows.append(["step 300 band", f"`{name}`", f"S {_pct(band['S'])}: {band_text}"])
         config = row["config"]["ok"]
         gate_rows.append(
             [
@@ -2088,7 +2200,21 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 ),
             ]
         )
-    gate_rows.append(["step-300 gate, all runs", "—", gates["step300"]["verdict"]])
+    comparable = {True: "comparable", False: "NOT comparable", None: GATE_NOT_KNOWN}
+    gate_rows.append(
+        [
+            "step-0 gate, all runs",
+            "—",
+            comparable[gates["step0"]["comparable"]] + _depends_text(gates["step0"]["depends_on"]),
+        ]
+    )
+    gate_rows.append(
+        [
+            "step-300 gate, all runs",
+            "—",
+            gates["step300"]["verdict"] + _depends_text(gates["step300"]["depends_on"]),
+        ]
+    )
     gate_rows.append(
         ["stratum", "—", "frozen" if gates["stratum"]["ok"] else "NOT the frozen stratum"]
     )

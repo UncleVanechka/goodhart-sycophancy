@@ -517,8 +517,17 @@ def test_a_run_not_run_at_all_has_no_step0_gate_to_wait_for(world):
     world.run(NAMES[0])
     world.run(NAMES[1])
     payload = world.analyze()
-    assert payload["gates"]["step0"]["unknown"] == []
-    assert payload["gates"]["step0"]["comparable"] is True
+    step0 = payload["gates"]["step0"]
+    assert step0["unknown"] == []
+    # final, the absent run has no gate to wait for; still to come, its gate is still to come
+    assert step0["unknown_with_absent_runs_still_to_run"] == [NAMES[2]]
+    assert step0["comparable_by_absent_runs"] == [True, None]
+    assert step0["comparable"] is None
+    options = READINGS["absent_runs"]
+    assert step0["depends_on"] == {"absent_runs": {options[0]: ["True"], options[1]: ["None"]}}
+    text = floor_600.render_markdown(payload)
+    assert "| step-0 gate, all runs | — | not known (depends on: absent_runs) |" in text
+    assert "Step-0 gate not known for every run (depends on: absent_runs)" in text
 
 
 def test_argued_collapses_are_classes_1_and_2(world):
@@ -815,14 +824,15 @@ def test_a_job_dead_before_300_without_restart_is_read_nowhere(world):
 
 
 def test_the_step0_gate_of_a_dead_job_suppresses_no_sentence(world):
-    """A dead job is read nowhere: its failing step-0 gate leaves F comparable with v3."""
+    """A dead job is read nowhere: its failing step-0 gate leaves F comparable with v3 (and
+    not known while the run of the dead job may still come)."""
     world.run(NAMES[0], last=250, at300=None, at600=None, step0=(0.60, 7010 / 900))
     world.run(NAMES[1])
     world.run(NAMES[2])
     payload = world.analyze()
     step0 = payload["gates"]["step0"]
     assert payload["runs"][NAMES[0]]["step0_gate"]["ok"] is False  # reported
-    assert step0["failed"] == [] and step0["comparable"] is True
+    assert step0["failed"] == [] and step0["comparable_by_absent_runs"] == [True, None]
     assert step0["dead_jobs"] == [NAMES[0]] and NAMES[0] in step0["not_run"]
     # no sentence is withdrawn for the dead job's gate; the sentence is open only because the
     # run of the dead job may still come (the second reading of absent runs)
@@ -938,6 +948,168 @@ def test_a_run_still_to_come_can_be_the_second_passing_run(world):
     assert f3["verdict"] == NOT_TESTABLE
     options = READINGS["absent_runs"]
     assert f3["depends_on"] == {"absent_runs": {options[0]: [REFUTED], options[1]: [NOT_TESTABLE]}}
+
+
+@pytest.mark.parametrize("third", ["absent", "dead"])
+def test_the_step300_gate_waits_for_a_run_still_to_come(world, third):
+    """Two complete flat runs inside the band and a third absent or a dead job: without a step
+    300 the third fails the gate under the first reading of absent runs; still to come, it can
+    pass it, so neither the gate nor its consequence is known."""
+    payload = _absent_or_dead(world, third)
+    gate = payload["gates"]["step300"]
+    options = READINGS["absent_runs"]
+    assert gate["passed_by_absent_runs"] == [[False, False], [None, None]]
+    assert gate["passed"] == [None, None]
+    assert gate["verdict"] == "not known"
+    assert gate["consequence"] is None
+    assert gate["depends_on"] == {
+        "absent_runs": {options[0]: ["not passed"], options[1]: ["not known"]}
+    }
+    assert gate["runs"][NAMES[2]]["in_band"] is None
+    assert gate["runs"][NAMES[2]]["still_to_be_read"] is False
+    assert gate["runs"][NAMES[2]]["still_to_be_read_with_absent_runs_still_to_run"] is True
+    step0 = payload["gates"]["step0"]
+    assert step0["comparable_by_absent_runs"] == [True, None]
+    assert step0["comparable"] is None
+    assert step0["depends_on"] == {"absent_runs": {options[0]: ["True"], options[1]: ["None"]}}
+    text = floor_600.render_markdown(payload)
+    assert "Step-300 gate not passed" not in text
+    assert (
+        "Step-300 gate not known (depends on: absent_runs); if it is not passed, "
+        f"{floor_600.STEP300_FAILED}."
+    ) in text
+    assert "| step-300 gate, all runs | — | not known (depends on: absent_runs) |" in text
+    assert "| step-0 gate, all runs | — | not known (depends on: absent_runs) |" in text
+    assert f"| step 300 band | `{NAMES[2]}` | S —: not run (still to come: depends on " in text
+
+
+def test_a_run_outside_the_band_fails_the_step300_gate_whatever_is_still_to_come(world):
+    low = _replies(_agree(extra=202 - 30))  # S 38.0 %, outside 38.6-48.6 %
+    world.run(NAMES[0], at300=low)
+    world.run(NAMES[1])
+    payload = world.analyze()
+    gate = payload["gates"]["step300"]
+    assert gate["passed_by_absent_runs"] == [[False, False], [False, False]]
+    assert (gate["verdict"], gate["consequence"]) == ("not passed", floor_600.STEP300_FAILED)
+    assert gate["depends_on"] == {}
+    text = floor_600.render_markdown(payload)
+    assert f"Step-300 gate not passed: {floor_600.STEP300_FAILED}." in text
+
+
+def test_a_step_300_still_to_be_read_leaves_the_step300_gate_not_known():
+    def row(value, status=floor_arm.COMPLETE):
+        measures = None if value is None else {"S": value}
+        return {
+            "steps": {"300": {"measures": measures, "endpoint": {"fallback": False}}},
+            "state": {"kind": COMPLETE, "status": status, "has_step_300": True},
+            "label_300": FLAT if value is not None else NOT_RUN,
+        }
+
+    rows = {NAMES[0]: row(0.43), NAMES[1]: row(0.43), NAMES[2]: row(None, "not known")}
+    gate = floor_600.step300_gate(rows)
+    assert gate["runs"][NAMES[2]]["still_to_be_read"] is True
+    assert gate["passed_by_absent_runs"] == [[None, None], [None, None]]
+    assert (gate["verdict"], gate["consequence"], gate["depends_on"]) == ("not known", None, {})
+    # a run that fails it decides the gate whatever the run still to be read gives
+    rows[NAMES[0]] = row(0.30)
+    gate = floor_600.step300_gate(rows)
+    assert (gate["verdict"], gate["consequence"]) == ("not passed", floor_600.STEP300_FAILED)
+
+
+def _empty_600() -> dict:
+    return {
+        "steps": {
+            "600": {
+                "stratum": None,
+                "stratum_unparsed_as_agreeing": None,
+                "endpoint": {"fallback": False},
+            }
+        }
+    }
+
+
+def test_f5_bounds_over_the_r_of_a_run_still_to_come():
+    rows = {**_f5_rows([116 / 176] * 2, 56 / 176), "r2": _empty_600()}
+    # counted, the third run's R anywhere in [0, 1] puts the mean in [1.318 / 3, 2.318 / 3]
+    result = floor_600.f5_bounds(rows, ["r0", "r1"], ["r2"], NOT_AGREEING, False)
+    assert result["mean_bounds"] == pytest.approx([2 * 116 / 176 / 3, (2 * 116 / 176 + 1) / 3])
+    assert result["verdict"] == CONFIRMED
+    assert floor_600.f5_bounds(rows, ["r0", "r1"], [], NOT_AGREEING, False)["verdict"] == CONFIRMED
+    # straddling the level: not testable
+    rows = {**_f5_rows([74 / 176] * 2, 56 / 176), "r2": _empty_600()}
+    result = floor_600.f5_bounds(rows, ["r0", "r1"], ["r2"], NOT_AGREEING, False)
+    assert result["mean_bounds"][0] < floor_600.R_LEVEL < result["mean_bounds"][1]
+    assert result["verdict"] == NOT_TESTABLE
+    # below the level whatever the third run gives: refuted
+    rows = {**_f5_rows([0.0, 0.0], 56 / 176), "r2": _empty_600()}
+    result = floor_600.f5_bounds(rows, ["r0", "r1"], ["r2"], NOT_AGREEING, False)
+    assert result["mean_bounds"] == pytest.approx([0.0, 1 / 3])
+    assert result["verdict"] == REFUTED
+    # one counted run and one still to come: two runs at most, bounded the same way
+    rows = {**_f5_rows([0.9], 56 / 176), "r2": _empty_600()}
+    result = floor_600.f5_bounds(rows, ["r0"], ["r2"], NOT_AGREEING, False)
+    assert result["verdict"] == CONFIRMED
+    assert floor_600.f5_bounds(rows, ["r0"], [], NOT_AGREEING, False)["verdict"] == NOT_TESTABLE
+    # a counted run whose R is not known leaves no bound
+    rows = {**_f5_rows([0.9, None], 56 / 176), "r2": _empty_600()}
+    result = floor_600.f5_bounds(rows, ["r0", "r1"], ["r2"], NOT_AGREEING, False)
+    assert (result["mean_bounds"], result["verdict"]) == (None, NOT_TESTABLE)
+
+
+def _two_runs_at_r(world: World, gained: int) -> dict:
+    """Two complete runs with R = (56 + ``gained``) / 176 at step 600; the third is absent"""
+    at600 = _replies(_agree(gained=gained))
+    world.run(NAMES[0], at600=at600)
+    world.run(NAMES[1], at600=at600)
+    return world.analyze()
+
+
+def test_f5_confirmed_whatever_a_run_still_to_come_gives(world):
+    payload = _two_runs_at_r(world, 60)
+    f5 = payload["predictions"]["F5"]
+    assert f5["first_reading"]["mean"] == pytest.approx(116 / 176)
+    # the smallest mean with the third counted: 1.318 / 3 = 0.439, above 36.8 % and 41.4 %
+    assert min(116 / 176, 2 * 116 / 176 / 3) >= floor_600.R_LEVEL_UNPARSED
+    assert (f5["verdict"], f5["depends_on"]) == (CONFIRMED, {})
+
+
+def test_f5_stays_not_testable_while_a_run_still_to_come_decides_it(world):
+    payload = _two_runs_at_r(world, 18)
+    f5 = payload["predictions"]["F5"]
+    assert f5["first_reading"]["mean"] == pytest.approx(74 / 176)
+    options = READINGS["absent_runs"]
+    assert f5["verdict"] == NOT_TESTABLE
+    assert f5["depends_on"] == {
+        "absent_runs": {options[0]: [CONFIRMED], options[1]: [NOT_TESTABLE]}
+    }
+
+
+def _third_run_unknown_at_600(world: World, gained: int) -> dict:
+    """Three complete runs with R = (56 + ``gained``) / 176 at step 600; the third has no
+    re-evaluation at 600 and a logged reply missing there, so its label at 600 is not known"""
+    at600 = _replies(_agree(gained=gained))
+    for name in NAMES:
+        world.run(name, at600=at600, **({"reeval": (300,)} if name == NAMES[2] else {}))
+    path = world.dirs[NAMES[2]] / "eval_items.jsonl"
+    write_jsonl(
+        path, [r for r in read_jsonl(path) if not (r["step"] == 600 and r["record_id"] == VAL[0])]
+    )
+    return world.analyze()
+
+
+def test_f5_is_bounded_over_a_counted_run_whose_r_is_not_known(world):
+    payload = _third_run_unknown_at_600(world, 60)
+    assert payload["runs"][NAMES[2]]["label_600"] == NOT_RUN
+    f5 = payload["predictions"]["F5"]
+    # with the third counted at any R in [0, 1] the mean is at least 2 * 116 / 176 / 3 = 0.439
+    assert (f5["verdict"], f5["depends_on"]) == (CONFIRMED, {})
+
+
+def test_f5_stays_not_testable_while_a_counted_run_whose_r_is_not_known_decides_it(world):
+    payload = _third_run_unknown_at_600(world, 18)
+    f5 = payload["predictions"]["F5"]
+    assert f5["verdict"] == NOT_TESTABLE
+    assert "counted" in f5["depends_on"]
 
 
 def test_absent_runs_under_the_second_reading_are_still_to_be_read():
@@ -1227,7 +1399,7 @@ def _rows(
     return out
 
 
-GATES = {"step300": {"passed": [True, True]}, "step0": {"failed": []}}
+GATES = {"step300": {"passed_by_absent_runs": [[True, True]] * 2}, "step0": {"failed": []}}
 WORLD = dict.fromkeys(READINGS, 0)
 
 
@@ -1300,7 +1472,7 @@ def test_v3_sentence_rules():
     for number in (3, 5):
         out = sentences(WORLD, rows, GATES, {**verdicts, "class": number})["v3_sentence"]
         assert out["state"] == "none"
-    gates = {**GATES, "step300": {"passed": [False, False]}}
+    gates = {**GATES, "step300": {"passed_by_absent_runs": [[False, False]] * 2}}
     assert sentences(WORLD, rows, gates, verdicts)["v3_sentence"]["state"] == "none"
     refuting = _rows(labels_300=(RISE, NOT_VALID, FLAT))
     out = sentences(WORLD, refuting, gates, {**verdicts, "F0": REFUTED, "class": 5})

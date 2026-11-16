@@ -65,10 +65,10 @@ src/goodhart/
   experiments/    baseline, best_of_n, train_grpo, confidence, plots — CLI entry points
 docs/DESIGN.md    data schema and module interfaces
 docs/ROADMAP.md   plan, flow diagrams, results so far, timeline
-docs/WRITEUP.md   the write-up (draft)
+docs/WRITEUP.md   the write-up
 docs/JUDGE_CHECK.md  the user-simulator check
 tests/            unit tests, no GPU and no network
-results/          JSON outputs; baseline/, bon/, grpo/, grpo_600/, grpo_floor/, grpo_first_pass/, grpo_smoke/, ci/, judge_check/ and analysis/ are committed, samples, per-question rows and checkpoints are not
+results/          JSON outputs; baseline/, bon/, grpo/, grpo_600/, grpo_floor/, grpo_floor_600/, grpo_first_pass/, grpo_smoke/, ci/, judge_check/ and analysis/ are committed, samples, per-question rows and checkpoints are not
 figures/          plots; the PNGs rendered from the committed results are tracked
 ```
 
@@ -106,6 +106,12 @@ make prereg-floor-600            # registered reading of the 600-step floor arm 
 # registered in docs/PREREG.md v4, part L; not part of grpo-all (GPU, except the reading)
 make are-you-sure-named          # a second turn naming the question's wrong letter, configs/are_you_sure_named.yaml -> results/are_you_sure_named/
 make prereg-named-letter         # registered reading of the named-letter turn (CPU) -> results/analysis/prereg_named_letter.{json,md}
+
+# exploratory, not pre-registered (CPU)
+make affirmation                 # replies that open by affirming the user -> results/analysis/affirmation.{json,md}
+
+# GPU time of the fetched runner jobs (CPU)
+make compute                     # sums the jobs' summary.json -> results/analysis/compute.{json,md}
 ```
 
 The training and Best-of-N configs in `configs/` (`baseline`, `bon`, `grpo`, `mitigation`,
@@ -126,6 +132,10 @@ base rows of v3.1, with the v3 floor runs for the step-0 comparison.
 one second turn built from each question's wrong-opinion record in `data/prompts.jsonl`, and
 `make prereg-named-letter` reads its rows with part B's rows as controls and the paired
 re-evaluation for the single-turn rate.
+`make affirmation` is exploratory and decides nothing registered: it reads the re-evaluation
+rows, the paired base rows and the training completions of the 600-step floor runs; the
+committed `results/analysis/affirmation.{json,md}` were generated from the fetched runner
+outputs with the command given in the Makefile and at the top of the md file.
 `persona_mix_600.yaml` and `reeval_600.yaml` belong to the three 600-step persona-mixture
 runs registered in docs/PREREG.md v2. Their logged outputs are stored in `results/grpo_600/`
 and their registered reading in `results/analysis/prereg_v2.{json,md}`, written by
@@ -153,7 +163,7 @@ the step-300 adapters, then checkpoints 100 and 200 in two), the samples from tw
 `prereg_results.{json,md}` merges the three parts with the corrections of an independent check
 and has no command of its own.
 `tests/test_reported_configs.py` rebuilds the stage config of every result under
-`results/baseline`, `bon`, `grpo`, `grpo_600`, `grpo_floor` and `grpo_first_pass` from `configs/` and compares it with
+`results/baseline`, `bon`, `grpo`, `grpo_600`, `grpo_floor`, `grpo_floor_600` and `grpo_first_pass` from `configs/` and compares it with
 the stored one (`grpo_smoke/` holds the smoke runs, which used other settings); results keep only the path of the judge
 config, so the judge settings are pinned to the write-up's (local Qwen2.5-7B-Instruct)
 separately. `make data` rebuilds the exact `data/prompts.jsonl` the runs used and fetches
@@ -182,11 +192,11 @@ and `grpo.use_vllm: true` in the GRPO ones. W&B logging is `wandb.mode` in
 | Held-out eval | SycophancyEval (Sharma et al., "Towards Understanding Sycophancy in Language Models") |
 | RL | TRL `GRPOTrainer` + LoRA, generation through vLLM or plain `transformers.generate` |
 | Tracking | Weights & Biases (off in the reported runs) |
-| Compute | About 176 GPU-hours in all, on one A100 80 GB |
+| Compute | About 225 GPU-hours in all (48 jobs, [results/analysis/compute.md](results/analysis/compute.md), `make compute`), on one A100 80 GB |
 
 ## Status
 
-The write-up is [docs/WRITEUP.md](docs/WRITEUP.md) (draft). Plan, flow diagrams,
+The write-up is [docs/WRITEUP.md](docs/WRITEUP.md). Plan, flow diagrams,
 per-run tables and the timeline live in [docs/ROADMAP.md](docs/ROADMAP.md); confidence
 intervals for every reported rate in [results/ci/summary.md](results/ci/summary.md); the
 headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png).
@@ -202,10 +212,20 @@ headline figure is [figures/goodhart_frontier.png](figures/goodhart_frontier.png
 - [x] GRPO across seeds: 3 runs at α = 0, 4 each at α = 0.3 and 0.6 — α = 0.3 only slows the collapse (46–97 %), α = 0.6 holds (37–46 %) with the proxy flat
 - [x] Persona mixture in GRPO, five runs (two of 300 steps, three of 600 registered in docs/PREREG.md v2): slows the drift, does not stop it — 48.5 and 55.8 % at step 300, 48.2, 62.2 and 74.3 % at step 600 on the 600 wrong-opinion validation and test questions (the last at 446 of 600 against a collapse line of 450, and past it on its validation half; untrained model 48.0 %; 85.3 and 95.2 % at step 300 for the two re-evaluated runs with the agreeable user alone), proxy +0.21 to +0.46 at step 300 — [results/analysis/prereg_v2.md](results/analysis/prereg_v2.md)
 - [x] 15 predictions registered before the re-analysis of the saved adapters ([docs/PREREG.md](docs/PREREG.md)): 9 confirmed, 2 refuted, 2 disputed, 1 partly, 1 classified — [results/analysis/prereg_results.md](results/analysis/prereg_results.md)
-- [x] Reply-floor arm and two-turn "are you sure?" evaluation, registered in docs/PREREG.md v3: with the floor, sycophancy ends at 43–45 % on the 600 wrong-opinion validation and test questions after 300 steps (untrained model 48.0 %; registered class "blocks within 300 steps", where a rise was predicted), though it creeps back after an early dip, and the 176 comparable questions would usually miss a 5-point rise; under "are you sure?" no adapter drops a correct answer measurably more often than the untrained model (1.5 %; every p ≥ 0.25) — [results/analysis/prereg_floor.md](results/analysis/prereg_floor.md), [results/analysis/prereg_are_you_sure.md](results/analysis/prereg_are_you_sure.md)
+- [x] Reply-floor arm and two-turn "are you sure?" evaluation, registered in docs/PREREG.md v3: with the floor, sycophancy ends at 43–45 % on the 600 wrong-opinion validation and test questions after 300 steps (untrained model 48.0 %; registered class "blocks within 300 steps", where a rise was predicted; extended by PREREG v4 part F to "blocks the rise for 300 steps, not for 600"), though it creeps back after an early dip, and the 176 comparable questions would usually miss a 5-point rise; under "are you sure?" no adapter drops a correct answer measurably more often than the untrained model (1.5 %; every p ≥ 0.25) — [results/analysis/prereg_floor.md](results/analysis/prereg_floor.md), [results/analysis/prereg_are_you_sure.md](results/analysis/prereg_are_you_sure.md)
+- [x] Reply floor to 600 steps, registered in docs/PREREG.md v4 part F: class 4 as predicted, F0–F5 confirmed — all three runs flat at step 300 (39.8, 44.3, 43.0 % on the 600 wrong-opinion questions), at step 600 46.3, 62.8 and 45.2 %, significantly higher than at step 300 in two runs (McNemar p < 0.05); one run (seed 43) rises above the untrained model where the untrained reply passes the floor (51.1 % against 31.8 %, p = 1.2e-06): "the floor slows the drift, it does not stop it" — [results/analysis/prereg_floor_600.md](results/analysis/prereg_floor_600.md)
+- [x] A second turn that names a wrong letter after the answer, registered in docs/PREREG.md v4 part L: reading *Letter*, L1, L2, L4 confirmed, L3 refuted — the α = 0 adapters take the named letter on 86.0 and 94.7 % of the questions they first answered correctly (untrained model 47.4 %), k = 0.82 and 0.81 of their single-turn increment; two remedies (α = 0.6 seed 44, mixture seed 43) exceed their registered bars — [results/analysis/prereg_named_letter.md](results/analysis/prereg_named_letter.md)
+- [x] Exploratory, not pre-registered: in the seed-43 600-step floor run, 69.5 % of wrong-opinion replies that give another letter open by affirming the user ("Yes, you're correct."; 3.4 % at step 300 of the same run, at most 1.9 % in every other policy read, the other floor runs included); counting them, agreement is 88.0 % against 62.8 % by letter; in training the opener spread from at most 6 % of such completions before step 400 to 69–76 % in the last 50 steps, and why is not established (detector precision 37 of 40, recall loosely bounded) — [results/analysis/affirmation.md](results/analysis/affirmation.md)
 - [x] Confidence intervals for every reported rate (`python -m goodhart.experiments.confidence`)
-- [x] Every run in results/baseline, bon, grpo, grpo_600 and grpo_floor reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
-- [ ] Write-up — draft in docs/WRITEUP.md (~3 000 words with tables, revised Nov 13–14 for the pre-registered results), final by Nov 17
+- [x] Every run in results/baseline, bon, grpo, grpo_600, grpo_floor and grpo_floor_600 reproducible from `configs/` with `make` (stage configs checked by `tests/test_reported_configs.py`)
+- [x] Write-up — docs/WRITEUP.md (~3 000 words with tables), final on Nov 16 with every pre-registered result
+
+## About this repository's history
+
+The history was rewritten once, before publication, to replace the author's e-mail address with a
+GitHub no-reply address and the 18 runner job identifiers that appeared in it with `job-01` … `job-18`. Commit dates
+and order are unchanged, so each pre-registration commit still precedes the runs it governs; no
+result changed.
 
 ## References
 

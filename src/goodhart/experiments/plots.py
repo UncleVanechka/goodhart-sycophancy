@@ -34,9 +34,14 @@ _ALPHA_KEY = re.compile(r"alpha\s*=\s*([0-9.eE+-]+)")
 _ALPHA_RUN = re.compile(r"-a(\d+(?:\.\d+)?)$")
 _STEP_KEYS = ("step", "global_step", "steps")
 
-GRPO_DIRS = ("grpo", "grpo_600", "grpo_floor")
+GRPO_DIRS = ("grpo", "grpo_600", "grpo_floor", "grpo_floor_600")
 """Directories under ``results/`` whose GRPO runs are drawn: the 300-step runs, the 600-step
-persona mixture (PREREG v2) and the reply-floor arm (PREREG v3)."""
+persona mixture (PREREG v2), the reply-floor arm (PREREG v3) and that arm trained for 600 steps
+(PREREG v4, part F)."""
+
+FLOOR_LONG_STEPS = 600
+"""Training length (``config.grpo.max_steps``) from which a reply-floor run is drawn as its own
+series rather than as part of the 300-step reply-floor series"""
 
 
 # ----------------------------------------------------------------------------- loading
@@ -60,8 +65,9 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 def _summary_fields(path: Path) -> dict[str, Any]:
     """Run metadata the curve rows lack, from ``summary.json`` (top level or ``config.reward``).
 
-    :return: ``alpha``, ``reward_kind`` and ``reward_floor`` (the reply floor of the reward),
-        each only when the summary records it
+    :return: ``alpha``, ``reward_kind``, ``reward_floor`` (the reply floor of the reward) and
+        ``max_steps`` (the training length, ``config.grpo.max_steps``), each only when the
+        summary records it
     """
     if not path.is_file():
         return {}
@@ -82,6 +88,10 @@ def _summary_fields(path: Path) -> dict[str, Any]:
     floor = meta.get("floor") or reward.get("floor")
     if floor:
         fields["reward_floor"] = floor
+    grpo = (meta.get("config") or {}).get("grpo") or {}
+    max_steps = grpo.get("max_steps") if isinstance(grpo, dict) else None
+    if max_steps is not None:
+        fields["max_steps"] = int(max_steps)
     return fields
 
 
@@ -110,8 +120,8 @@ def load_results(results_dir: str | Path) -> dict[str, Any]:
     Baseline and BoN payloads are sorted by model name. GRPO runs are read from every
     directory of ``GRPO_DIRS`` (``curve.jsonl`` per run directory); a run name already taken
     by an earlier directory is prefixed with its own directory. Rows are sorted by step and
-    carry the run's ``alpha``, ``reward_kind`` and ``reward_floor`` from ``summary.json`` when
-    the rows lack them. Missing directories give empty containers.
+    carry the run's ``alpha``, ``reward_kind``, ``reward_floor`` and ``max_steps`` from
+    ``summary.json`` when the rows lack them. Missing directories give empty containers.
     """
     root = Path(results_dir)
     baseline = (
@@ -205,11 +215,13 @@ def _sorted_alpha_keys(curves: dict[str, Any]) -> list[str]:
 
 
 # Series that α alone does not name, each with its legend text: a reward kind whose α says
-# nothing about the objective, and the reply floor added to the α = 0 reward (PREREG v3).
-# Their order here is their order in the legend and in the palette, after the α series
+# nothing about the objective, the reply floor added to the α = 0 reward (PREREG v3) and the
+# same reward trained for FLOOR_LONG_STEPS steps (PREREG v4, part F). Their order here is their
+# order in the legend and in the palette, after the α series
 _NAMED_GROUPS: dict[str, str] = {
     "persona_mix": "persona mix",
     "reply_floor": "α = 0 + reply floor",
+    "reply_floor_600": f"α = 0 + reply floor, {FLOOR_LONG_STEPS} steps",
 }
 
 Group = float | str | None
@@ -237,13 +249,29 @@ def _floor_of_run(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     return floor or None
 
 
+def _max_steps_of_run(rows: list[dict[str, Any]]) -> int | None:
+    """Training length of a run (``max_steps`` of its rows or ``config.grpo.max_steps``)."""
+    first = rows[0] if rows else {}
+    steps = first.get("max_steps")
+    if steps is None:
+        grpo = first.get("config", {}).get("grpo", {}) if isinstance(first, dict) else {}
+        steps = grpo.get("max_steps") if isinstance(grpo, dict) else None
+    return None if steps is None else int(steps)
+
+
 def _group_of_run(run_name: str, rows: list[dict[str, Any]]) -> Group:
-    """Series a run belongs to: the named series of a persona mixture or a reply floor, else α."""
+    """Series a run belongs to: the named series of a persona mixture or a reply floor, else α.
+
+    A reply-floor run trained for at least ``FLOOR_LONG_STEPS`` steps is its own series
+    """
     kind = _kind_of_run(run_name, rows)
     if kind in _NAMED_GROUPS:
         return kind
     if _floor_of_run(rows) is not None:
-        return "reply_floor"
+        steps = _max_steps_of_run(rows)
+        return (
+            "reply_floor_600" if steps is not None and steps >= FLOOR_LONG_STEPS else "reply_floor"
+        )
     return _alpha_of_run(run_name, rows)
 
 
@@ -428,6 +456,11 @@ def _save(fig, out: str | Path) -> Path:
     return out_path
 
 
+def _legend_columns(n_entries: int) -> int:
+    """Columns of a figure legend: one row up to five entries, else rows of equal length."""
+    return n_entries if n_entries <= 5 else -(-n_entries // -(-n_entries // 5))
+
+
 def _figure_legend(fig, axes: Iterable[Any]) -> None:
     handles: dict[str, Any] = {}
     for ax in axes:
@@ -438,7 +471,7 @@ def _figure_legend(fig, axes: Iterable[Any]) -> None:
             list(handles.values()),
             list(handles),
             loc="lower center",
-            ncol=min(5, len(handles)),
+            ncol=_legend_columns(len(handles)),
             bbox_to_anchor=(0.5, -0.02),
         )
 

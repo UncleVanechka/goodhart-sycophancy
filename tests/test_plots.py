@@ -363,6 +363,66 @@ def test_floor_runs_form_a_series_after_the_persona_mixture(tmp_path: Path) -> N
     _assert_png(plots.plot_grpo_curves(grpo, tmp_path / "c.png"))
 
 
+def test_summary_fields_read_the_training_length(tmp_path: Path) -> None:
+    path = tmp_path / "summary.json"
+    path.write_text(json.dumps({"alpha": 0.0, "config": {"grpo": {"max_steps": 600}}}))
+    assert plots._summary_fields(path) == {"alpha": 0.0, "max_steps": 600}
+    path.write_text(json.dumps({"alpha": 0.0, "config": {"grpo": {}}}))
+    assert plots._summary_fields(path) == {"alpha": 0.0}
+
+
+def test_long_floor_runs_form_their_own_series_after_the_floor(tmp_path: Path) -> None:
+    def summary(steps: int) -> dict:
+        reward = {"kind": "immediate", "alpha": 0.0, "floor": FLOOR}
+        return {
+            "alpha": 0.0,
+            "floor": FLOOR,
+            "config": {"reward": reward, "grpo": {"max_steps": steps}},
+        }
+
+    _write_run(tmp_path, "grpo", "grpo-immediate", _steps(300), {"alpha": 0.0})
+    _write_run(tmp_path, "grpo_600", "grpo-persona-mix", _steps(600), MIX)
+    for seed in ("", "-s43"):
+        _write_run(
+            tmp_path, "grpo_floor", f"grpo-immediate-floor30{seed}", _steps(300), summary(300)
+        )
+        _write_run(
+            tmp_path,
+            "grpo_floor_600",
+            f"grpo-immediate-floor30-600{seed}",
+            _steps(600),
+            summary(600),
+        )
+    grpo = plots.load_results(tmp_path)["grpo"]
+    assert grpo["grpo-immediate-floor30-600"][0]["max_steps"] == 600
+    groups = plots._group_runs(grpo)
+    assert list(groups) == [0.0, "persona_mix", "reply_floor", "reply_floor_600"]
+    assert list(groups["reply_floor_600"]) == [
+        "grpo-immediate-floor30-600",
+        "grpo-immediate-floor30-600-s43",
+    ]
+    assert len(groups["reply_floor"]) == 2
+    assert plots._run_extent(groups["reply_floor_600"]) is None
+    label = plots._group_label("reply_floor_600", 3)
+    assert label == "GRPO · α = 0 + reply floor, 600 steps (3 runs)"
+    cfg_only = [{"step": 0, "config": {"reward": {"floor": FLOOR}, "grpo": {"max_steps": 600}}}]
+    assert plots._group_of_run("x", cfg_only) == "reply_floor_600"
+    assert plots._group_of_run("x", _steps(300, reward_floor=FLOOR, max_steps=300)) == "reply_floor"
+    # the new series takes the next palette slot, so the earlier series keep their colours
+    bon = [{"curves": {f"alpha={a}": {} for a in (0.0, 0.3, 0.6, 1.0)}}]
+    colors = plots._series_colors(bon, grpo)
+    assert colors["persona_mix"] == plots.PALETTE[4]
+    assert colors["reply_floor"] == plots.PALETTE[5]
+    assert colors["reply_floor_600"] == plots.PALETTE[6]
+    _assert_png(plots.plot_goodhart_frontier([], grpo, tmp_path / "f.png"))
+    _assert_png(plots.plot_grpo_curves(grpo, tmp_path / "c.png"))
+
+
+def test_legend_rows_are_balanced() -> None:
+    assert [plots._legend_columns(n) for n in (1, 2, 5)] == [1, 2, 5]
+    assert [plots._legend_columns(n) for n in (6, 7, 10, 11)] == [3, 4, 5, 4]
+
+
 def test_longer_runs_extend_their_series(tmp_path: Path) -> None:
     runs = {
         "grpo-persona-mix": _steps(300, **MIX),

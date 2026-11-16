@@ -9,7 +9,7 @@ SEED_ARG = $(if $(SEED),--seed $(SEED))
 .PHONY: setup setup-dev test lint data baseline bon grpo grpo-mitigation grpo-persona-mix grpo-all \
 	grpo-persona-mix-600 grpo-floor grpo-floor-600 reeval reeval-600 reeval-floor reeval-floor-600 \
 	are-you-sure are-you-sure-named prereg-v2 prereg-floor prereg-are-you-sure prereg-named-letter \
-	prereg-floor-600 sample-rate rescore ci plots clean
+	prereg-floor-600 affirmation compute sample-rate rescore ci plots clean
 
 setup:
 	python3.11 -m venv .venv
@@ -132,6 +132,21 @@ prereg-named-letter:
 prereg-floor-600:
 	$(PY) -m goodhart.analysis.floor_600 --runs results/grpo_floor_600 --reeval results/reeval_floor_600 \
 		--base-items results/reeval/base/items.jsonl --v3-runs results/grpo_floor $(ARGS)
+
+# Exploratory, not registered (CPU): replies that open by affirming the user ->
+# results/analysis/affirmation.{json,md}, from the re-evaluation rows, the base rows of the
+# paired re-evaluation, the training completions of the 600-step floor runs and the dataset.
+# The committed outputs read the fetched runner outputs, e.g.
+# make affirmation ARGS="--reeval $(echo results/fetched/*/results/reeval*) \
+#   --runs $(echo results/fetched/*/results/grpo_floor_600) --base-items <base items.jsonl>"
+affirmation:
+	$(PY) -m goodhart.analysis.affirmation --reeval results/reeval results/reeval_floor \
+		results/reeval_floor_600 --base-items results/reeval/base/items.jsonl \
+		--runs results/grpo_floor_600 --data data/prompts.jsonl $(ARGS)
+
+# GPU time of the fetched runner jobs (CPU) -> results/analysis/compute.{json,md}
+compute:
+	$(PY) -m goodhart.analysis.compute --runner-results results/fetched $(ARGS)
 
 sample-rate:
 	$(PY) -m goodhart.experiments.sample_rate --config $(CFG)/sample_rate.yaml

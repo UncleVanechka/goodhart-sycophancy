@@ -115,3 +115,35 @@ def base_none_samples() -> Path | None:
     return _by_sha256(
         "*/results/sample_rate/base-none-val-test/samples.jsonl", BASE_NONE_SAMPLES_SHA256
     )
+
+
+# the dataset of make data, the prompt records of the training completions
+DATA = Path("data/prompts.jsonl")
+
+
+@lru_cache(maxsize=1)
+def affirmation_inputs() -> dict | None:
+    """The inputs of the committed ``affirmation`` outputs among the fetched runner outputs:
+    every re-evaluation directory (``*/results/reeval*``, sorted), the base policy's rows of
+    the paired re-evaluation, the directories that hold the three 600-step floor runs with
+    their training completions, each run found once, and the dataset. ``None`` unless all are
+    on disk."""
+    from goodhart.analysis import floor_600
+
+    base = paired_base_items()
+    if base is None or not DATA.is_file():
+        return None
+    runs = []
+    for run in floor_600.RUNS:
+        hits = sorted(FETCHED.glob(f"*/results/grpo_floor_600/{run}/rollouts.jsonl"))
+        if len(hits) != 1:
+            return None
+        runs.append(hits[0].parents[1])
+    return {
+        "reeval": tuple(
+            sorted(path for path in FETCHED.glob("*/results/reeval*") if path.is_dir())
+        ),
+        "base_items": base,
+        "runs": tuple(sorted(set(runs))),
+        "data": DATA,
+    }

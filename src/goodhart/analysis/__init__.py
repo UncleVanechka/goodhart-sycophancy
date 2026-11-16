@@ -47,7 +47,16 @@ so they describe the runs rather than test pre-registered hypotheses.
   existed: NR, Δ_N, Δ1, Δ_P, D_N, k, the labels, the reading and the predictions L1-L4, from
   the rows of ``goodhart.experiments.are_you_sure`` with the named turn, part B's rows and the
   paired re-evaluation to ``results/analysis/prereg_named_letter.json`` and ``.md``; run with
-  ``python -m goodhart.analysis.named_letter``.
+  ``python -m goodhart.analysis.named_letter``;
+- ``affirmation``: exploratory and not registered, chosen after an audit of the replies: a
+  fixed detector of replies that open by affirming the user, its hand check, and the share of
+  affirming openers and of verbal agreement (an affirming opener or the user's letter) by
+  policy and in the training completions of the 600-step floor runs, to
+  ``results/analysis/affirmation.json`` and ``.md``; run with
+  ``python -m goodhart.analysis.affirmation``;
+- ``compute``: the GPU time of the fetched runner jobs (the sum of the ``seconds`` of their
+  ``summary.json``, by stage, failed jobs included) to ``results/analysis/compute.json`` and
+  ``.md``; run with ``python -m goodhart.analysis.compute``.
 
 Run the four analyses with ``python -m goodhart.analysis`` (``__main__``); outputs go to
 ``results/analysis/``.

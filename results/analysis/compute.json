@@ -1,0 +1,79 @@
+{
+  "jobs": 48,
+  "seconds": 811153,
+  "hours": 225.32,
+  "failed": [
+    {
+      "stage": "grpo",
+      "rc": 1,
+      "seconds": 541
+    }
+  ],
+  "stages": {
+    "are_you_sure": {
+      "jobs": 1,
+      "seconds": 11307,
+      "hours": 3.14
+    },
+    "are_you_sure_named": {
+      "jobs": 1,
+      "seconds": 7461,
+      "hours": 2.07
+    },
+    "baseline": {
+      "jobs": 2,
+      "seconds": 881,
+      "hours": 0.24
+    },
+    "bon": {
+      "jobs": 2,
+      "seconds": 18832,
+      "hours": 5.23
+    },
+    "grpo": {
+      "jobs": 6,
+      "seconds": 53156,
+      "hours": 14.77
+    },
+    "grpo_floor": {
+      "jobs": 3,
+      "seconds": 85381,
+      "hours": 23.72
+    },
+    "grpo_floor_600": {
+      "jobs": 3,
+      "seconds": 158380,
+      "hours": 43.99
+    },
+    "mitigation": {
+      "jobs": 13,
+      "seconds": 328538,
+      "hours": 91.26
+    },
+    "reeval": {
+      "jobs": 7,
+      "seconds": 79989,
+      "hours": 22.22
+    },
+    "reeval_floor": {
+      "jobs": 1,
+      "seconds": 6838,
+      "hours": 1.9
+    },
+    "reeval_floor_600": {
+      "jobs": 1,
+      "seconds": 11439,
+      "hours": 3.18
+    },
+    "rescore": {
+      "jobs": 5,
+      "seconds": 23819,
+      "hours": 6.62
+    },
+    "sample_rate": {
+      "jobs": 3,
+      "seconds": 25132,
+      "hours": 6.98
+    }
+  }
+}

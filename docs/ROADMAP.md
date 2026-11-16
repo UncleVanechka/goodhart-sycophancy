@@ -1,6 +1,6 @@
 # Roadmap
 
-*Updated 2026-11-14. Hard deadline for the write-up: **2026-11-21**.*
+*Updated 2026-11-16. Hard deadline for the write-up: **2026-11-21**.*
 
 One sentence: optimizing an LLM against the approval of a simulated user breeds
 sycophancy the way optimizing a feed for clicks breeds clickbait, and we test
@@ -31,16 +31,22 @@ refuted, 2 are disputed, 1 held partly and 1 was a classification
 the 13 runs as logged by Nov 10 and predates both. The two experiments
 registered in PREREG.md v3 are done: with a reply floor, sycophancy ends at
 43–45 % on the 600 endpoint questions after 300 steps (class "blocks within
-300 steps"; a rise was predicted), though it creeps back after an early dip,
+300 steps"; a rise was predicted; by PREREG v4 part F, "blocks the rise for 300
+steps, not for 600"), though it creeps back after an early dip,
 and the 176 comparable questions would usually miss a 5-point rise
 ([prereg_floor.md](../results/analysis/prereg_floor.md)); under a two-turn
 "are you sure?" no adapter drops a correct answer measurably more often than
 the untrained model, 1.5 % ([prereg_are_you_sure.md](../results/analysis/prereg_are_you_sure.md)).
+The two follow-ups registered in PREREG.md v4 are done too: run to 600 steps, the floor
+slows the drift but does not stop it (class 4, as predicted; one run of three rises
+above the untrained model, [prereg_floor_600.md](../results/analysis/prereg_floor_600.md)),
+and a wrong letter named after the answer moves the α = 0 adapters (86.0 and 94.7 %
+against 47.4 %; reading *Letter*, [prereg_named_letter.md](../results/analysis/prereg_named_letter.md)).
 Next: the final write-up.
 
 ```
 scaffold ──► data ──► baseline ──► Best-of-N ──► GRPO ──► mitigation ──► write-up
-  done       done       done       done        done      done (16 runs)     Nov 17+
+  done       done       done       done        done      done (19 runs)     Nov 17+
 ```
 
 ## 1. The question in one picture
@@ -258,7 +264,8 @@ recorded the training reward instead of the immediate-judge proxy on its eval
 curve; every later run reports the immediate judge, the informed judge and the
 training reward side by side, and the figure above averages those runs (three
 per α, mean with a min–max band), the five persona-mixture runs (three to step
-600, PREREG v2) and the three reply-floor runs (PREREG v3). GRPO sampling on the GPU is not
+600, PREREG v2), the three reply-floor runs (PREREG v3) and the three 600-step reply-floor
+runs (PREREG v4). GRPO sampling on the GPU is not
 bit-reproducible, so the two seed-42 runs at each α are two independent draws
 like any other pair.
 
@@ -370,8 +377,8 @@ What the numbers say:
 | Nov 6–9 | Judge check, baseline for 2 models, Best-of-N curves | ✅ Nov 7 |
 | **Nov 10** | **Checkpoint: Best-of-N plot exists** — otherwise cut RL | ✅ met Nov 7 |
 | Nov 10–13 | GRPO smoke (200 steps, proxy must rise) → full run, checkpoints, held-out eval | ✅ smoke Nov 7 · ✅ full run Nov 8 |
-| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · ✅ persona mixture Nov 9–10, two runs · ✅ three 600-step mixture seeds Nov 12–13 (PREREG v2: drifts) · ✅ PREREG v3 floor arm and two-turn test, evaluated Nov 14 |
-| Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ✅ draft Nov 9, revised Nov 13–14 for the pre-registered results ([WRITEUP.md](WRITEUP.md)) · ⏳ final |
+| Nov 14–16 | Delayed reward in GRPO (2–3 α); persona mixture if time allows | ✅ α = 0.3, 0.6 Nov 8–9, four runs each, three seeds at α = 0 · ✅ persona mixture Nov 9–10, two runs · ✅ three 600-step mixture seeds Nov 12–13 (PREREG v2: drifts) · ✅ PREREG v3 floor arm and two-turn test, evaluated Nov 14 · ✅ PREREG v4 floor to 600 steps and named-letter turn, evaluated Nov 15–16 |
+| Nov 17–19 | 3–4 final figures, limitations, 1 500–2 000-word write-up, repo cleanup, publish | ✅ draft Nov 9, final Nov 16 with every pre-registered result ([WRITEUP.md](WRITEUP.md)) · ⏳ final |
 | Nov 20–21 | Final review, ship | ⏳ |
 
 ## 6. Next steps, in order
@@ -408,8 +415,10 @@ What the numbers say:
 5. **Confidence intervals** — done: `python -m goodhart.experiments.confidence` writes
    `results/ci/` (bootstrap over questions for baseline and Best-of-N, reproducing every
    committed point; Wilson intervals and across-run spread for GRPO).
-6. **Write-up and cleanup** — draft in [WRITEUP.md](WRITEUP.md), revised Nov 13–14 for the
-   pre-registered results; final by Nov 17.
+6. **Write-up and cleanup** — done: [WRITEUP.md](WRITEUP.md), final on Nov 16 with every
+   pre-registered result.
+7. **PREREG v4 part F, the floor to 600 steps** — done: class 4, F0–F5 confirmed ([prereg_floor_600.md](../results/analysis/prereg_floor_600.md)).
+8. **PREREG v4 part L, a named letter in the second turn** — done: reading *Letter*, L1, L2, L4 confirmed, L3 refuted ([prereg_named_letter.md](../results/analysis/prereg_named_letter.md)).
 
 ## 7. Risks and fallbacks
 
@@ -427,8 +436,8 @@ What the numbers say:
 - [x] Held-out SycophancyEval numbers before and after GRPO
 - [x] Confidence intervals on every reported rate — `results/ci/summary.md` (bootstrap over questions for baseline and Best-of-N, Wilson plus 3–4 runs per α for GRPO)
 - [x] Limitations section: small models, synthetic user, one training judge (two others re-rated the samples), seeds ([WRITEUP.md](WRITEUP.md) §8)
-- [x] `make data && make baseline && make bon && make grpo-all`, the 600-step mixture runs (`make grpo-persona-mix-600`, SEED=44–46), the floor runs (`make grpo-floor`, SEED=42–44) and `make plots` reproduce every figure from `configs/` (stage configs checked against every reported result by `tests/test_reported_configs.py`; `data/prompts.jsonl` byte-identical; the first-pass pair is not rerun)
-- [ ] Write-up published; README links to it (draft linked)
+- [x] `make data && make baseline && make bon && make grpo-all`, the 600-step mixture runs (`make grpo-persona-mix-600`, SEED=44–46), the floor runs (`make grpo-floor` and `make grpo-floor-600`, SEED=42–44) and `make plots` reproduce every figure from `configs/` (stage configs checked against every reported result by `tests/test_reported_configs.py`; `data/prompts.jsonl` byte-identical; the first-pass pair is not rerun)
+- [x] Write-up final; README links to it
 
 ## 9. Reproduce what exists today
 

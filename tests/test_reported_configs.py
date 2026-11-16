@@ -59,7 +59,7 @@ RUN_FILES = ("curve.jsonl", "summary.json", "train_log.jsonl")
 # summary keeps it
 JOB_FIELD = "runner_job_id"
 # every stage directory that stores the logged outputs of GRPO runs
-GRPO_STAGES = ("grpo", "grpo_first_pass", "grpo_600", "grpo_floor", "grpo_smoke")
+GRPO_STAGES = ("grpo", "grpo_first_pass", "grpo_600", "grpo_floor", "grpo_floor_600", "grpo_smoke")
 
 
 def _strip(cfg: dict, extra: tuple[str, ...] = ()) -> dict:
